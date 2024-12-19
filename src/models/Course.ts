@@ -9,6 +9,8 @@ class Course extends Model {
   declare id: string;
   declare userId: string;
   declare name: string;
+  declare isVisible: boolean;
+  declare image: string;
   declare description: string;
   declare text: string;
   declare required: string;
@@ -35,6 +37,14 @@ Course.init({
     onDelete: 'CASCADE',
   },
   name: {
+    type: sequelize.STRING,
+    allowNull: false,
+  },
+  isVisible: {
+    type: sequelize.STRING,
+    allowNull: false,
+  },
+  image: {
     type: sequelize.STRING,
     allowNull: false,
   },

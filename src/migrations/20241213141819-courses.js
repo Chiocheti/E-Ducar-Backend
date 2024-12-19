@@ -26,6 +26,14 @@ module.exports = {
           type: Sequelize.STRING,
           allowNull: false,
         },
+        isVisible: {
+          type: Sequelize.BOOLEAN,
+          allowNull: false,
+        },
+        image: {
+          type: Sequelize.STRING,
+          allowNull: false,
+        },
         description: {
           type: Sequelize.STRING,
           allowNull: false,
@@ -40,6 +48,10 @@ module.exports = {
         },
         duration: {
           type: Sequelize.STRING,
+          allowNull: false,
+        },
+        price: {
+          type: Sequelize.DECIMAL(10, 2),
           allowNull: false,
         },
         created_at: {
