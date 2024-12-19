@@ -32,7 +32,11 @@ module.exports = {
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
         },
-        data: {
+        register_date: {
+          type: Sequelize.DATEONLY,
+          allowNull: false,
+        },
+        conclusion_date: {
           type: Sequelize.DATEONLY,
           allowNull: false,
         },
