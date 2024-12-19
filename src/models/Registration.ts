@@ -41,7 +41,11 @@ Registration.init({
     onUpdate: 'CASCADE',
     onDelete: 'CASCADE',
   },
-  data: {
+  registerDate: {
+    type: sequelize.DATEONLY,
+    allowNull: false,
+  },
+  conclusionDate: {
     type: sequelize.DATEONLY,
     allowNull: false,
   },
