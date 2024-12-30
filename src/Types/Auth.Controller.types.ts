@@ -3,6 +3,7 @@ export type UserType = {
   username: string;
   name: string;
   isTeacher: boolean;
+  image: string,
 };
 
 export type TokensType = {
