@@ -53,7 +53,8 @@ const AuthController = {
             id: user.id,
             username,
             name: user.name,
-            isTeacher: user.isTeacher
+            isTeacher: user.isTeacher,
+            image: user.image
           },
         },
         error: null,

@@ -3,9 +3,12 @@ import { Request, Response, NextFunction } from 'express';
 
 export default function authenticate(req: Request, res: Response, next: NextFunction) {
   const token = req.headers['x-access-token'] || req.headers['authorization'];
-
   if (!token || typeof token !== 'string') {
-    res.status(201).json({ status: 2, message: 'Nenhum token enviado' });
+    res.status(201).json({
+      success: false,
+      data: null,
+      error: JSON.stringify('Nenhum token enviado'),
+    });
 
     return
   }
@@ -13,8 +16,9 @@ export default function authenticate(req: Request, res: Response, next: NextFunc
   try {
     if (!process.env.ACCESS_TOKEN_SECRET_KEY) {
       res.status(201).json({
-        status: 2,
-        message: 'ACCESS_TOKEN_SECRET_KEY não está definido',
+        success: false,
+        data: null,
+        error: JSON.stringify('ACCESS_TOKEN_SECRET_KEY não está definido'),
       });
 
       return
@@ -24,8 +28,9 @@ export default function authenticate(req: Request, res: Response, next: NextFunc
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET_KEY);
     } catch (error) {
       res.status(201).json({
-        status: 2,
-        message: 'Token inválido ou expirado',
+        success: false,
+        data: null,
+        error: JSON.stringify('Token inválido ou expirado'),
       });
 
       return
@@ -34,8 +39,9 @@ export default function authenticate(req: Request, res: Response, next: NextFunc
     next();
   } catch (error) {
     res.status(500).json({
-      status: 3,
-      message: JSON.stringify(error),
+      success: false,
+      data: null,
+      error: JSON.stringify(error),
     });
 
     return
