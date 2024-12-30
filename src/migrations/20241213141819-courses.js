@@ -26,7 +26,7 @@ module.exports = {
           type: Sequelize.STRING,
           allowNull: false,
         },
-        isVisible: {
+        is_visible: {
           type: Sequelize.BOOLEAN,
           allowNull: false,
         },
