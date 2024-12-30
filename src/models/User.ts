@@ -11,6 +11,7 @@ class User extends Model {
   declare password: string;
   declare isTeacher: boolean;
   declare refreshToken: string;
+  declare image: string;
 }
 
 User.init({
@@ -40,6 +41,10 @@ User.init({
   refreshToken: {
     type: sequelize.STRING,
     allowNull: true,
+  },
+  image: {
+    type: sequelize.STRING,
+    allowNull: false,
   },
 }, {
   sequelize: db,

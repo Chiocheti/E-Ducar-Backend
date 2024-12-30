@@ -3,7 +3,8 @@ import z from "zod";
 import User from "../models/User";
 import bcrypt from 'bcrypt'
 import { ExpectedApiResponse } from "../Types/Api.Controller.types";
-
+import fs from 'fs';
+import path from "path";
 
 const createUserSchema = z.object({
   name: z.string(),
@@ -26,11 +27,49 @@ type UpdateUserType = z.infer<typeof updateUserSchema>;
 const UserController = {
   async getAll(req: Request, res: Response) {
     try {
-      const users = await User.findAll();
+      const users = await User.findAll({ order: ['name'] });
 
       const apiResponse: ExpectedApiResponse<User[] | null> = {
         success: true,
         data: users,
+        error: null
+      };
+
+      return res.status(200).json(apiResponse);
+    } catch (error) {
+      console.log(error);
+
+      const apiResponse: ExpectedApiResponse<string | null> = {
+        success: false,
+        data: null,
+        error: JSON.stringify('Houve um erro interno')
+      }
+
+      return res.status(500).json(apiResponse);
+    }
+  },
+
+  async getById(req: Request, res: Response) {
+    const { id }: { id: string } = req.body;
+    try {
+      const user = await User.findOne({
+        attributes: ['id', 'name', 'username', 'isTeacher', 'image'],
+        where: { id }
+      });
+
+      if (!user) {
+        const apiResponse: ExpectedApiResponse<string | null> = {
+          success: false,
+          data: null,
+          error: JSON.stringify('Usuario não encontrado')
+        };
+
+        return res.status(201).json(apiResponse);
+      }
+
+      const apiResponse: ExpectedApiResponse<User | null> = {
+        success: true,
+        data: user,
         error: null
       };
 
@@ -77,7 +116,17 @@ const UserController = {
 
   async create(req: Request, res: Response) {
     try {
-      const { user }: { user: CreateUserType } = req.body;
+      const { file } = req;
+      const user: CreateUserType = JSON.parse(req.body.user);
+
+      if (!file) {
+        const apiResponse: ExpectedApiResponse<string | null> = {
+          success: false,
+          data: null,
+          error: JSON.stringify('Imagem é obrigatória'),
+        };
+        return res.status(201).json(apiResponse);
+      }
 
       const { success, error } = createUserSchema.safeParse(user);
 
@@ -103,7 +152,13 @@ const UserController = {
         return res.status(201).json(apiResponse);
       }
 
-      await User.create({ ...user, password: bcrypt.hashSync(user.password, 10) });
+      const newUser = {
+        ...user,
+        password: bcrypt.hashSync(user.password, 10),
+        image: file.filename,
+      }
+
+      await User.create(newUser);
 
       const apiResponse: ExpectedApiResponse<string | null> = {
         success: true,
@@ -136,25 +191,103 @@ const UserController = {
 
       const { success: userSuccess, error: userError } = updateUserSchema.safeParse(user);
 
-      if (!userSuccess) {
-        return res.status(400).json({ message: 'User error', error: userError });
-      }
-
       if (!idSuccess) {
-        return res.status(400).json({ message: 'Id error', error: idError });
+        const apiResponse: ExpectedApiResponse<string | null> = {
+          success: false,
+          data: null,
+          error: JSON.stringify(idError)
+        }
+
+        return res.status(201).json(apiResponse);
       }
 
-      // const updatedUser = await User.update(user, {
-      //   where: { id },
-      // });
+      if (!userSuccess) {
+        const apiResponse: ExpectedApiResponse<string | null> = {
+          success: false,
+          data: null,
+          error: JSON.stringify(userError)
+        }
 
-      return res.status(200).json(user);
+        return res.status(201).json(apiResponse);
+      }
+
+      if (user.password) {
+        user.password = bcrypt.hashSync(user.password, 10)
+      };
+
+      await User.update(user, {
+        where: { id },
+      });
+
+      const apiResponse: ExpectedApiResponse<string | null> = {
+        success: true,
+        data: 'Usuario editado com sucesso',
+        error: null
+      }
+
+      return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      return res.status(500).json({ message: 'Erro interno', error })
+      const apiResponse: ExpectedApiResponse<string | null> = {
+        success: false,
+        data: null,
+        error: JSON.stringify('Houve um erro interno')
+      }
+
+      return res.status(500).json(apiResponse);
     }
-  }
+  },
+
+  async updateImage(req: Request, res: Response) {
+    try {
+      const { file } = req;
+      const imageLink: string = req.body.imageLink;
+      const userId: string = req.body.userId;
+
+      if (!file) {
+        const apiResponse: ExpectedApiResponse<string | null> = {
+          success: false,
+          data: null,
+          error: JSON.stringify('Imagem é obrigatória'),
+        };
+        return res.status(201).json(apiResponse);
+      }
+
+      const filePath = path.join(__dirname, '..', 'uploads', imageLink);
+
+      if (!fs.existsSync(filePath)) {
+        const apiResponse: ExpectedApiResponse<string | null> = {
+          success: false,
+          data: null,
+          error: JSON.stringify('Arquivo não encontrado'),
+        };
+        return res.status(201).json(apiResponse);
+      }
+
+      fs.unlinkSync(filePath);
+
+      await User.update({ image: file.filename }, { where: { id: userId } })
+
+      const apiResponse: ExpectedApiResponse<string | null> = {
+        success: true,
+        data: 'Usuario cadastrado com sucesso',
+        error: null
+      }
+
+      return res.status(200).json(apiResponse);
+    } catch (error) {
+      console.log(error);
+
+      const apiResponse: ExpectedApiResponse<string | null> = {
+        success: false,
+        data: null,
+        error: JSON.stringify('Houve um erro interno')
+      }
+
+      return res.status(500).json(apiResponse);
+    }
+  },
 };
 
 export default UserController;
