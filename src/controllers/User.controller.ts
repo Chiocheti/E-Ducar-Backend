@@ -1,6 +1,7 @@
 import { Response, Request } from "express";
 import z from "zod";
 import User from "../models/User";
+import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt'
 import { ExpectedApiResponse } from "../Types/Api.Controller.types";
 import fs from 'fs';
@@ -51,6 +52,7 @@ const UserController = {
 
   async getById(req: Request, res: Response) {
     const { id }: { id: string } = req.body;
+
     try {
       const user = await User.findOne({
         attributes: ['id', 'name', 'username', 'isTeacher', 'image'],
@@ -115,14 +117,14 @@ const UserController = {
   },
 
   async create(req: Request, res: Response) {
-    try {
-      const { file } = req;
-      const user: CreateUserType = JSON.parse(req.body.user);
+    const { file } = req;
+    const user: CreateUserType = JSON.parse(req.body.user);
 
+    try {
       if (!file) {
-        const apiResponse: ExpectedApiResponse<string | null> = {
+        const apiResponse: ExpectedApiResponse<string | number> = {
           success: false,
-          data: null,
+          data: 2,
           error: JSON.stringify('Imagem é obrigatória'),
         };
         return res.status(201).json(apiResponse);
@@ -131,9 +133,9 @@ const UserController = {
       const { success, error } = createUserSchema.safeParse(user);
 
       if (!success) {
-        const apiResponse: ExpectedApiResponse<string | null> = {
+        const apiResponse: ExpectedApiResponse<string | number> = {
           success: false,
-          data: null,
+          data: 1,
           error: JSON.stringify(error)
         }
 
@@ -143,24 +145,29 @@ const UserController = {
       const findUser = await User.findOne({ where: { username: user.username } })
 
       if (findUser) {
-        const apiResponse: ExpectedApiResponse<string | null> = {
+        const apiResponse: ExpectedApiResponse<string | number> = {
           success: false,
-          data: null,
+          data: 2,
           error: JSON.stringify('Este username ja está em uso')
         }
 
         return res.status(201).json(apiResponse);
       }
 
+      const uniqueName = `${uuidv4()}-${file.originalname}`;
+      const uploadPath = path.join(__dirname, '..', 'uploads', uniqueName);
+
+      fs.writeFileSync(uploadPath, file.buffer);
+
       const newUser = {
         ...user,
         password: bcrypt.hashSync(user.password, 10),
-        image: file.filename,
+        image: uniqueName,
       }
 
       await User.create(newUser);
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<string | number> = {
         success: true,
         data: 'Usuario cadastrado com sucesso',
         error: null
@@ -170,9 +177,9 @@ const UserController = {
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<string | number> = {
         success: false,
-        data: null,
+        data: 0,
         error: JSON.stringify('Houve um erro interno')
       }
 
@@ -181,31 +188,16 @@ const UserController = {
   },
 
   async update(req: Request, res: Response) {
-    const idSchema = z.string();
-
     const { id, user }: { id: string, user: UpdateUserType } = req.body;
 
     try {
+      const { success, error } = updateUserSchema.safeParse(user);
 
-      const { success: idSuccess, error: idError } = idSchema.safeParse(id);
-
-      const { success: userSuccess, error: userError } = updateUserSchema.safeParse(user);
-
-      if (!idSuccess) {
-        const apiResponse: ExpectedApiResponse<string | null> = {
+      if (!success) {
+        const apiResponse: ExpectedApiResponse<string | number> = {
           success: false,
-          data: null,
-          error: JSON.stringify(idError)
-        }
-
-        return res.status(201).json(apiResponse);
-      }
-
-      if (!userSuccess) {
-        const apiResponse: ExpectedApiResponse<string | null> = {
-          success: false,
-          data: null,
-          error: JSON.stringify(userError)
+          data: 1,
+          error: JSON.stringify(error)
         }
 
         return res.status(201).json(apiResponse);
@@ -219,7 +211,7 @@ const UserController = {
         where: { id },
       });
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<string | number> = {
         success: true,
         data: 'Usuario editado com sucesso',
         error: null
@@ -229,9 +221,9 @@ const UserController = {
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<string | number> = {
         success: false,
-        data: null,
+        data: 0,
         error: JSON.stringify('Houve um erro interno')
       }
 
@@ -240,11 +232,11 @@ const UserController = {
   },
 
   async updateImage(req: Request, res: Response) {
-    try {
-      const { file } = req;
-      const imageLink: string = req.body.imageLink;
-      const userId: string = req.body.userId;
+    const { file } = req;
+    const imageLink: string = req.body.imageLink;
+    const userId: string = req.body.userId;
 
+    try {
       if (!file) {
         const apiResponse: ExpectedApiResponse<string | null> = {
           success: false,
@@ -267,11 +259,16 @@ const UserController = {
 
       fs.unlinkSync(filePath);
 
-      await User.update({ image: file.filename }, { where: { id: userId } })
+      const uniqueName = `${uuidv4()}-${file.originalname}`;
+      const uploadPath = path.join(__dirname, '..', 'uploads', uniqueName);
+
+      fs.writeFileSync(uploadPath, file.buffer);
+
+      await User.update({ image: uniqueName }, { where: { id: userId } })
 
       const apiResponse: ExpectedApiResponse<string | null> = {
         success: true,
-        data: 'Usuario cadastrado com sucesso',
+        data: 'Foto de perfil editada com sucesso',
         error: null
       }
 

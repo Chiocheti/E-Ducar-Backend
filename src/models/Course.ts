@@ -15,6 +15,7 @@ class Course extends Model {
   declare text: string;
   declare required: string;
   declare duration: string;
+  declare support: string;
   declare price: number;
 };
 
@@ -64,9 +65,15 @@ Course.init({
     type: sequelize.TEXT,
     allowNull: false,
   },
-  price: {
-    type: sequelize.DECIMAL(10, 2),
+  support: {
+    type: sequelize.INTEGER,
     allowNull: false,
+    defaultValue: 0,
+  },
+  price: {
+    type: sequelize.FLOAT,
+    allowNull: false,
+    defaultValue: 0,
   },
 }, {
   sequelize: db,

@@ -50,9 +50,15 @@ module.exports = {
           type: Sequelize.STRING,
           allowNull: false,
         },
-        price: {
-          type: Sequelize.DECIMAL(10, 2),
+        support: {
+          type: Sequelize.INTEGER,
           allowNull: false,
+          defaultValue: 0,
+        },
+        price: {
+          type: Sequelize.FLOAT,
+          allowNull: false,
+          defaultValue: 0,
         },
         created_at: {
           type: Sequelize.DATE,
