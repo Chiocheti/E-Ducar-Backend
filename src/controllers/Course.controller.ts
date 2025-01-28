@@ -35,6 +35,8 @@ type UpdateCourseType = z.infer<typeof updateCourseSchema>;
 
 const CourseController = {
   async getAll(req: Request, res: Response) {
+    type ResponseDataType = Course[] | string;
+
     try {
       const courses = await Course.findAll({
         include: [
@@ -47,20 +49,20 @@ const CourseController = {
         order: ['name']
       });
 
-      const apiResponse: ExpectedApiResponse<Course[] | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: true,
+        type: 0,
         data: courses,
-        error: null,
       }
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: false,
-        data: null,
-        error: JSON.stringify('Houve um erro interno')
+        type: 1,
+        data: JSON.stringify(error),
       }
 
       return res.status(500).json(apiResponse);
@@ -68,15 +70,18 @@ const CourseController = {
   },
 
   async create(req: Request, res: Response) {
+    type ResponseDataType = string;
+
+    const { file } = req;
+    const course: CreateCourseType = JSON.parse(req.body.course);
+
     try {
-      const { file } = req;
-      const course: CreateCourseType = JSON.parse(req.body.course);
 
       if (!file) {
-        const apiResponse: ExpectedApiResponse<string | number | null> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: 2,
-          error: JSON.stringify('Imagem é obrigatória'),
+          type: 3,
+          data: 'Imagem é obrigatória',
         };
         return res.status(201).json(apiResponse);
       }
@@ -84,10 +89,10 @@ const CourseController = {
       const { success, error } = createCourseSchema.safeParse(course);
 
       if (!success) {
-        const apiResponse: ExpectedApiResponse<string | number | null> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: 1,
-          error: JSON.stringify(error)
+          type: 2,
+          data: JSON.stringify(error),
         }
 
         return res.status(201).json(apiResponse);
@@ -102,20 +107,20 @@ const CourseController = {
 
       await Course.create({ ...newCourse, isVisible: false });
 
-      const apiResponse: ExpectedApiResponse<string | number | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: true,
+        type: 0,
         data: 'Curso cadastrado com sucesso',
-        error: null
       }
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | number | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: false,
-        data: 0,
-        error: JSON.stringify('Houve um erro interno')
+        type: 1,
+        data: JSON.stringify(error),
       }
 
       return res.status(500).json(apiResponse);
@@ -123,16 +128,18 @@ const CourseController = {
   },
 
   async update(req: Request, res: Response) {
+    type ResponseDataType = string;
+
     const { id, course }: { id: string, course: UpdateCourseType } = req.body;
 
     try {
       const { success, error } = updateCourseSchema.safeParse(course);
 
       if (!success) {
-        const apiResponse: ExpectedApiResponse<string | number> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: 1,
-          error: JSON.stringify(error)
+          type: 2,
+          data: JSON.stringify(error),
         }
 
         return res.status(201).json(apiResponse);
@@ -140,20 +147,20 @@ const CourseController = {
 
       await Course.update(course, { where: { id } });
 
-      const apiResponse: ExpectedApiResponse<string | number> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: true,
-        data: 'Usuario editado com sucesso',
-        error: null
+        type: 0,
+        data: 'Curso editado com sucesso',
       }
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | number> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: false,
-        data: 0,
-        error: JSON.stringify('Houve um erro interno')
+        type: 1,
+        data: JSON.stringify(error),
       }
 
       return res.status(500).json(apiResponse);
@@ -161,16 +168,17 @@ const CourseController = {
   },
 
   async updateImage(req: Request, res: Response) {
+    type ResponseDataType = string;
+
     const { file } = req;
-    const imageLink: string = req.body.imageLink;
-    const id: string = req.body.id;
+    const { imageLink, id }: { imageLink: string, id: string } = req.body;
 
     try {
       if (!file) {
-        const apiResponse: ExpectedApiResponse<string | number> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: 2,
-          error: JSON.stringify('Imagem é obrigatória'),
+          type: 3,
+          data: 'Imagem é obrigatória',
         };
         return res.status(201).json(apiResponse);
       }
@@ -178,10 +186,10 @@ const CourseController = {
       const filePath = path.join(__dirname, '..', 'uploads', imageLink);
 
       if (!fs.existsSync(filePath)) {
-        const apiResponse: ExpectedApiResponse<string | number> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: 2,
-          error: JSON.stringify('Arquivo não encontrado'),
+          type: 3,
+          data: 'Arquivo não encontrado',
         };
         return res.status(201).json(apiResponse);
       }
@@ -195,20 +203,20 @@ const CourseController = {
 
       await Course.update({ image: uniqueName }, { where: { id } })
 
-      const apiResponse: ExpectedApiResponse<string | number> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: true,
+        type: 0,
         data: 'Foto do curso editada com sucesso',
-        error: null
       }
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | number> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: false,
-        data: 0,
-        error: JSON.stringify('Houve um erro interno')
+        type: 1,
+        data: JSON.stringify(error),
       }
 
       return res.status(500).json(apiResponse);

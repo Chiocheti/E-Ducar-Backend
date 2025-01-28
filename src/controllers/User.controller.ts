@@ -27,23 +27,25 @@ type UpdateUserType = z.infer<typeof updateUserSchema>;
 
 const UserController = {
   async getAll(req: Request, res: Response) {
+    type ResponseDataType = User[] | string;
+
     try {
       const users = await User.findAll({ order: ['name'] });
 
-      const apiResponse: ExpectedApiResponse<User[] | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: true,
+        type: 0,
         data: users,
-        error: null
       };
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: false,
-        data: null,
-        error: JSON.stringify('Houve um erro interno')
+        type: 1,
+        data: JSON.stringify(error),
       }
 
       return res.status(500).json(apiResponse);
@@ -51,6 +53,8 @@ const UserController = {
   },
 
   async getById(req: Request, res: Response) {
+    type ResponseDataType = User | string;
+
     const { id }: { id: string } = req.body;
 
     try {
@@ -60,29 +64,29 @@ const UserController = {
       });
 
       if (!user) {
-        const apiResponse: ExpectedApiResponse<string | null> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: null,
-          error: JSON.stringify('Usuario não encontrado')
+          type: 3,
+          data: 'Usuario não encontrado',
         };
 
         return res.status(201).json(apiResponse);
       }
 
-      const apiResponse: ExpectedApiResponse<User | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: true,
+        type: 0,
         data: user,
-        error: null
       };
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: false,
-        data: null,
-        error: JSON.stringify('Houve um erro interno')
+        type: 1,
+        data: JSON.stringify(error),
       }
 
       return res.status(500).json(apiResponse);
@@ -90,26 +94,28 @@ const UserController = {
   },
 
   async getTeachers(req: Request, res: Response) {
+    type ResponseDataType = User[] | string;
+
     try {
       const teachers = await User.findAll({
         where: { isTeacher: true },
         attributes: ['name', 'id']
       });
 
-      const apiResponse: ExpectedApiResponse<User[] | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: true,
+        type: 0,
         data: teachers,
-        error: null
       };
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: false,
-        data: null,
-        error: JSON.stringify('Houve um erro interno')
+        type: 1,
+        data: JSON.stringify(error),
       }
 
       return res.status(500).json(apiResponse);
@@ -117,27 +123,30 @@ const UserController = {
   },
 
   async create(req: Request, res: Response) {
+    type ResponseDataType = string;
+
     const { file } = req;
     const user: CreateUserType = JSON.parse(req.body.user);
 
     try {
       if (!file) {
-        const apiResponse: ExpectedApiResponse<string | number> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: 2,
-          error: JSON.stringify('Imagem é obrigatória'),
+          type: 3,
+          data: 'Imagem é obrigatória',
         };
+
         return res.status(201).json(apiResponse);
       }
 
       const { success, error } = createUserSchema.safeParse(user);
 
       if (!success) {
-        const apiResponse: ExpectedApiResponse<string | number> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: 1,
-          error: JSON.stringify(error)
-        }
+          type: 2,
+          data: JSON.stringify(error),
+        };
 
         return res.status(201).json(apiResponse);
       }
@@ -145,10 +154,10 @@ const UserController = {
       const findUser = await User.findOne({ where: { username: user.username } })
 
       if (findUser) {
-        const apiResponse: ExpectedApiResponse<string | number> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: 2,
-          error: JSON.stringify('Este username ja está em uso')
+          type: 3,
+          data: 'Este username ja está em uso',
         }
 
         return res.status(201).json(apiResponse);
@@ -167,20 +176,20 @@ const UserController = {
 
       await User.create(newUser);
 
-      const apiResponse: ExpectedApiResponse<string | number> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: true,
+        type: 0,
         data: 'Usuario cadastrado com sucesso',
-        error: null
       }
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | number> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: false,
-        data: 0,
-        error: JSON.stringify('Houve um erro interno')
+        type: 1,
+        data: JSON.stringify(error),
       }
 
       return res.status(500).json(apiResponse);
@@ -188,16 +197,18 @@ const UserController = {
   },
 
   async update(req: Request, res: Response) {
+    type ResponseDataType = string;
+
     const { id, user }: { id: string, user: UpdateUserType } = req.body;
 
     try {
       const { success, error } = updateUserSchema.safeParse(user);
 
       if (!success) {
-        const apiResponse: ExpectedApiResponse<string | number> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: 1,
-          error: JSON.stringify(error)
+          type: 2,
+          data: JSON.stringify(error),
         }
 
         return res.status(201).json(apiResponse);
@@ -207,24 +218,22 @@ const UserController = {
         user.password = bcrypt.hashSync(user.password, 10)
       };
 
-      await User.update(user, {
-        where: { id },
-      });
+      await User.update(user, { where: { id } });
 
-      const apiResponse: ExpectedApiResponse<string | number> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: true,
+        type: 0,
         data: 'Usuario editado com sucesso',
-        error: null
       }
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | number> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: false,
-        data: 0,
-        error: JSON.stringify('Houve um erro interno')
+        type: 1,
+        data: JSON.stringify(error),
       }
 
       return res.status(500).json(apiResponse);
@@ -232,16 +241,17 @@ const UserController = {
   },
 
   async updateImage(req: Request, res: Response) {
+    type ResponseDataType = string;
+
     const { file } = req;
-    const imageLink: string = req.body.imageLink;
-    const userId: string = req.body.userId;
+    const { imageLink, userId }: { imageLink: string, userId: string } = req.body;
 
     try {
       if (!file) {
-        const apiResponse: ExpectedApiResponse<string | null> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: null,
-          error: JSON.stringify('Imagem é obrigatória'),
+          type: 3,
+          data: 'Imagem é obrigatória',
         };
         return res.status(201).json(apiResponse);
       }
@@ -249,10 +259,10 @@ const UserController = {
       const filePath = path.join(__dirname, '..', 'uploads', imageLink);
 
       if (!fs.existsSync(filePath)) {
-        const apiResponse: ExpectedApiResponse<string | null> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: null,
-          error: JSON.stringify('Arquivo não encontrado'),
+          type: 3,
+          data: 'Arquivo não encontrado',
         };
         return res.status(201).json(apiResponse);
       }
@@ -266,20 +276,20 @@ const UserController = {
 
       await User.update({ image: uniqueName }, { where: { id: userId } })
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: true,
+        type: 0,
         data: 'Foto de perfil editada com sucesso',
-        error: null
       }
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: false,
-        data: null,
-        error: JSON.stringify('Houve um erro interno')
+        type: 1,
+        data: JSON.stringify(error),
       }
 
       return res.status(500).json(apiResponse);
