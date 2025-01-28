@@ -10,16 +10,17 @@ const refreshTokenDuration = '30d';
 
 const AuthController = {
   async login(req: Request, res: Response) {
-    try {
-      const { username, password }: { username: string, password: string } = req.body;
+    type ResponseDataType = UserPlusToken | string;
 
+    const { username, password }: { username: string, password: string } = req.body;
+    try {
       const user = await User.findOne({ where: { username } });
 
       if (!user) {
-        const apiResponse: ExpectedApiResponse<string | null> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: null,
-          error: JSON.stringify('Usuario ou senha incorretos')
+          type: 3,
+          data: 'Usuário ou senha incorretos',
         }
 
         return res.status(201).json(apiResponse);
@@ -28,10 +29,10 @@ const AuthController = {
       const isMatch = await bcrypt.compare(password, user.password);
 
       if (!isMatch) {
-        const apiResponse: ExpectedApiResponse<string | null> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: null,
-          error: JSON.stringify('Usuario ou senha incorretos')
+          type: 3,
+          data: 'Usuário ou senha incorretos',
         }
 
         return res.status(201).json(apiResponse);
@@ -42,8 +43,9 @@ const AuthController = {
 
       await user.update({ refreshToken });
 
-      const apiResponse: ExpectedApiResponse<UserPlusToken | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: true,
+        type: 0,
         data: {
           tokens: {
             accessToken,
@@ -57,17 +59,16 @@ const AuthController = {
             image: user.image
           },
         },
-        error: null,
       }
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: false,
-        data: null,
-        error: JSON.stringify('Houve um erro interno')
+        type: 1,
+        data: JSON.stringify(error),
       }
 
       return res.status(500).json(apiResponse)
@@ -75,16 +76,18 @@ const AuthController = {
   },
 
   async logout(req: Request, res: Response) {
+    type ResponseDataType = string;
+
+    const { id }: { id: string } = req.body;
     try {
-      const { id }: { id: string } = req.body;
 
       const user = await User.findOne({ where: { id } });
 
       if (!user) {
-        const apiResponse: ExpectedApiResponse<string | null> = {
+        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
           success: false,
-          data: null,
-          error: JSON.stringify('Usuario não encontrado')
+          type: 3,
+          data: 'Usuário não encontrado',
         }
 
         return res.status(201).json(apiResponse)
@@ -92,20 +95,20 @@ const AuthController = {
 
       await user.update({ refreshToken: null });
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: true,
+        type: 0,
         data: 'Deslogado com sucesso',
-        error: null
       }
 
       return res.status(200).json(apiResponse)
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<string | null> = {
+      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
         success: false,
-        data: null,
-        error: JSON.stringify(error)
+        type: 1,
+        data: JSON.stringify(error),
       }
 
       return res.status(500).json(apiResponse)
