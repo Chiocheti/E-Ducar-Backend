@@ -16,11 +16,19 @@ module.exports = {
           type: Sequelize.STRING,
           allowNull: false,
         },
-        username: {
+        email: {
           type: Sequelize.STRING,
           allowNull: false,
         },
         password: {
+          type: Sequelize.STRING,
+          allowNull: false,
+        },
+        phone: {
+          type: Sequelize.STRING,
+          allowNull: false,
+        },
+        image: {
           type: Sequelize.STRING,
           allowNull: false,
         },
