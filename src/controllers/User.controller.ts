@@ -3,7 +3,7 @@ import z from "zod";
 import User from "../models/User";
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt'
-import { ExpectedApiResponse } from "../Types/Api.Controller.types";
+import { ExpectedApiResponse } from "../Types/ApiTypes";
 import fs from 'fs';
 import path from "path";
 
@@ -27,22 +27,20 @@ type UpdateUserType = z.infer<typeof updateUserSchema>;
 
 const UserController = {
   async getAll(req: Request, res: Response) {
-    type ResponseDataType = User[] | string;
-
     try {
       const users = await User.findAll({ order: ['name'] });
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: users,
+        data: JSON.stringify(users),
       };
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
@@ -53,8 +51,6 @@ const UserController = {
   },
 
   async getById(req: Request, res: Response) {
-    type ResponseDataType = User | string;
-
     const { id }: { id: string } = req.body;
 
     try {
@@ -64,7 +60,7 @@ const UserController = {
       });
 
       if (!user) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
           data: 'Usuario não encontrado',
@@ -73,17 +69,17 @@ const UserController = {
         return res.status(201).json(apiResponse);
       }
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: user,
+        data: JSON.stringify(user),
       };
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
@@ -94,25 +90,23 @@ const UserController = {
   },
 
   async getTeachers(req: Request, res: Response) {
-    type ResponseDataType = User[] | string;
-
     try {
       const teachers = await User.findAll({
         where: { isTeacher: true },
         attributes: ['name', 'id']
       });
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: teachers,
+        data: JSON.stringify(teachers),
       };
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
@@ -123,14 +117,12 @@ const UserController = {
   },
 
   async create(req: Request, res: Response) {
-    type ResponseDataType = string;
-
     const { file } = req;
     const user: CreateUserType = JSON.parse(req.body.user);
 
     try {
       if (!file) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
           data: 'Imagem é obrigatória',
@@ -142,7 +134,7 @@ const UserController = {
       const { success, error } = createUserSchema.safeParse(user);
 
       if (!success) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 2,
           data: JSON.stringify(error),
@@ -154,7 +146,7 @@ const UserController = {
       const findUser = await User.findOne({ where: { username: user.username } })
 
       if (findUser) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
           data: 'Este username ja está em uso',
@@ -176,7 +168,7 @@ const UserController = {
 
       await User.create(newUser);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
         data: 'Usuario cadastrado com sucesso',
@@ -186,7 +178,7 @@ const UserController = {
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
@@ -197,15 +189,13 @@ const UserController = {
   },
 
   async update(req: Request, res: Response) {
-    type ResponseDataType = string;
-
     const { id, user }: { id: string, user: UpdateUserType } = req.body;
 
     try {
       const { success, error } = updateUserSchema.safeParse(user);
 
       if (!success) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 2,
           data: JSON.stringify(error),
@@ -220,7 +210,7 @@ const UserController = {
 
       await User.update(user, { where: { id } });
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
         data: 'Usuario editado com sucesso',
@@ -230,7 +220,7 @@ const UserController = {
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
@@ -241,14 +231,12 @@ const UserController = {
   },
 
   async updateImage(req: Request, res: Response) {
-    type ResponseDataType = string;
-
     const { file } = req;
     const { imageLink, userId }: { imageLink: string, userId: string } = req.body;
 
     try {
       if (!file) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
           data: 'Imagem é obrigatória',
@@ -259,7 +247,7 @@ const UserController = {
       const filePath = path.join(__dirname, '..', 'uploads', imageLink);
 
       if (!fs.existsSync(filePath)) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
           data: 'Arquivo não encontrado',
@@ -276,7 +264,7 @@ const UserController = {
 
       await User.update({ image: uniqueName }, { where: { id: userId } })
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
         data: 'Foto de perfil editada com sucesso',
@@ -286,7 +274,7 @@ const UserController = {
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
