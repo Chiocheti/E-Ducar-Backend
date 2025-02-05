@@ -1,15 +1,18 @@
 import { Router } from 'express';
 import userRoutes from './user.router';
-import authRoutes from './auth.router';
-import authenticate from '../middlewares/auth';
+import authAdmRoutes from './auth.adm.router';
+import authStudentRoutes from './auth.student.router';
 import courseRoutes from './course.router';
-import publicStudentRoutes from './public.student.router';
+import registrationRoutes from './registration.router';
+import studentRoutes from './student.router';
 
 const router = Router();
 
-router.use('/auth', authRoutes);
-router.use('/publicStudentsAuth', publicStudentRoutes);
-router.use('/users', authenticate, userRoutes);
-router.use('/courses', authenticate, courseRoutes);
+router.use('/authAdm', authAdmRoutes);
+router.use('/authStudent', authStudentRoutes);
+router.use('/users', userRoutes);
+router.use('/courses', courseRoutes);
+router.use('/registrations', registrationRoutes);
+router.use('/students', studentRoutes);
 
 export default router;

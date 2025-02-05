@@ -2,22 +2,24 @@ import User from "../models/User"
 import { Response, Request } from "express"
 import jwt from "jsonwebtoken"
 import bcrypt from 'bcrypt';
-import { UserPlusToken } from "../Types/Auth.Controller.types";
-import { ExpectedApiResponse } from "../Types/Api.Controller.types";
+import { ExpectedApiResponse } from "../Types/ApiTypes";
+import Course from "../models/Course";
+import { UserType } from "../Types/UserTypes";
+import { TokensType } from "../Types/TokensTypes";
 
 const accessTokenDuration = '7d';
 const refreshTokenDuration = '30d';
 
-const AuthController = {
+const AuthAdmController = {
   async login(req: Request, res: Response) {
-    type ResponseDataType = UserPlusToken | string;
-
     const { username, password }: { username: string, password: string } = req.body;
     try {
-      const user = await User.findOne({ where: { username } });
+      const user = await User.findOne({
+        where: { username }
+      });
 
       if (!user) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
           data: 'Usuário ou senha incorretos',
@@ -29,7 +31,7 @@ const AuthController = {
       const isMatch = await bcrypt.compare(password, user.password);
 
       if (!isMatch) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
           data: 'Usuário ou senha incorretos',
@@ -43,29 +45,23 @@ const AuthController = {
 
       await user.update({ refreshToken });
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: {
+        data: JSON.stringify({
+          user,
           tokens: {
             accessToken,
             refreshToken,
           },
-          user: {
-            id: user.id,
-            username,
-            name: user.name,
-            isTeacher: user.isTeacher,
-            image: user.image
-          },
-        },
+        }),
       }
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
@@ -76,15 +72,13 @@ const AuthController = {
   },
 
   async logout(req: Request, res: Response) {
-    type ResponseDataType = string;
-
     const { id }: { id: string } = req.body;
     try {
 
       const user = await User.findOne({ where: { id } });
 
       if (!user) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
           data: 'Usuário não encontrado',
@@ -95,7 +89,7 @@ const AuthController = {
 
       await user.update({ refreshToken: null });
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
         data: 'Deslogado com sucesso',
@@ -105,7 +99,7 @@ const AuthController = {
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
@@ -114,6 +108,6 @@ const AuthController = {
       return res.status(500).json(apiResponse)
     }
   }
-}
+};
 
-export default AuthController;
+export default AuthAdmController;

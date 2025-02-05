@@ -1,49 +1,56 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
+import { ExpectedApiResponse } from '../Types/ApiTypes';
 
 export default function authenticate(req: Request, res: Response, next: NextFunction) {
-  const token = req.headers['x-access-token'] || req.headers['authorization'];
+  const token = req.headers['x-access-token'];
   if (!token || typeof token !== 'string') {
-    res.status(201).json({
+    const apiResponse: ExpectedApiResponse = {
       success: false,
-      data: null,
-      error: JSON.stringify('Nenhum token enviado'),
-    });
+      type: 1,
+      data: 'Nenhum token enviado'
+    }
 
+    res.status(201).json(apiResponse);
     return
   }
 
   try {
     if (!process.env.ACCESS_TOKEN_SECRET_KEY) {
-      res.status(201).json({
-        success: false,
-        data: null,
-        error: JSON.stringify('ACCESS_TOKEN_SECRET_KEY não está definido'),
-      });
 
+      const apiResponse: ExpectedApiResponse = {
+        success: false,
+        type: 1,
+        data: 'ACCESS_TOKEN_SECRET_KEY não está definido'
+      }
+
+      res.status(201).json(apiResponse);
       return
     }
 
     try {
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET_KEY);
     } catch (error) {
-      res.status(201).json({
-        success: false,
-        data: null,
-        error: JSON.stringify('Token inválido ou expirado'),
-      });
 
+      const apiResponse: ExpectedApiResponse = {
+        success: false,
+        type: 1,
+        data: 'Token inválido ou expirado'
+      }
+
+      res.status(201).json(apiResponse);
       return
     }
 
     next();
   } catch (error) {
-    res.status(500).json({
+    const apiResponse: ExpectedApiResponse = {
       success: false,
-      data: null,
-      error: JSON.stringify(error),
-    });
+      type: 1,
+      data: JSON.stringify(error)
+    }
 
+    res.status(201).json(apiResponse);
     return
   }
 }

@@ -2,7 +2,7 @@ import Course from "../models/Course";
 import User from "../models/User";
 import { Response, Request } from "express";
 import z from "zod";
-import { ExpectedApiResponse } from "../Types/Api.Controller.types";
+import { ExpectedApiResponse } from "../Types/ApiTypes";
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from "path";
@@ -35,31 +35,61 @@ type UpdateCourseType = z.infer<typeof updateCourseSchema>;
 
 const CourseController = {
   async getAll(req: Request, res: Response) {
-    type ResponseDataType = Course[] | string;
-
     try {
       const courses = await Course.findAll({
         include: [
           {
             model: User,
-            as: 'users',
-            attributes: ['name'],
+            as: 'user',
           }
         ],
         order: ['name']
       });
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: courses,
+        data: JSON.stringify(courses),
       }
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
+        success: false,
+        type: 1,
+        data: JSON.stringify(error),
+      }
+
+      return res.status(500).json(apiResponse);
+    }
+  },
+
+  async getOpen(req: Request, res: Response) {
+    try {
+      const courses = await Course.findAll({
+        include: [
+          {
+            model: User,
+            as: 'user',
+          }
+        ],
+        where: { isVisible: true },
+        order: ['name']
+      });
+
+      const apiResponse: ExpectedApiResponse = {
+        success: true,
+        type: 0,
+        data: JSON.stringify(courses),
+      }
+
+      return res.status(200).json(apiResponse);
+    } catch (error) {
+      console.log(error);
+
+      const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
@@ -70,15 +100,13 @@ const CourseController = {
   },
 
   async create(req: Request, res: Response) {
-    type ResponseDataType = string;
-
     const { file } = req;
     const course: CreateCourseType = JSON.parse(req.body.course);
 
     try {
 
       if (!file) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
           data: 'Imagem é obrigatória',
@@ -89,7 +117,7 @@ const CourseController = {
       const { success, error } = createCourseSchema.safeParse(course);
 
       if (!success) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 2,
           data: JSON.stringify(error),
@@ -107,7 +135,7 @@ const CourseController = {
 
       await Course.create({ ...newCourse, isVisible: false });
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
         data: 'Curso cadastrado com sucesso',
@@ -117,7 +145,7 @@ const CourseController = {
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
@@ -128,15 +156,13 @@ const CourseController = {
   },
 
   async update(req: Request, res: Response) {
-    type ResponseDataType = string;
-
     const { id, course }: { id: string, course: UpdateCourseType } = req.body;
 
     try {
       const { success, error } = updateCourseSchema.safeParse(course);
 
       if (!success) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 2,
           data: JSON.stringify(error),
@@ -147,7 +173,7 @@ const CourseController = {
 
       await Course.update(course, { where: { id } });
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
         data: 'Curso editado com sucesso',
@@ -157,7 +183,7 @@ const CourseController = {
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
@@ -168,14 +194,12 @@ const CourseController = {
   },
 
   async updateImage(req: Request, res: Response) {
-    type ResponseDataType = string;
-
     const { file } = req;
     const { imageLink, id }: { imageLink: string, id: string } = req.body;
 
     try {
       if (!file) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
           data: 'Imagem é obrigatória',
@@ -186,7 +210,7 @@ const CourseController = {
       const filePath = path.join(__dirname, '..', 'uploads', imageLink);
 
       if (!fs.existsSync(filePath)) {
-        const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+        const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
           data: 'Arquivo não encontrado',
@@ -203,17 +227,17 @@ const CourseController = {
 
       await Course.update({ image: uniqueName }, { where: { id } })
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: 'Foto do curso editada com sucesso',
+        data: uniqueName,
       }
 
       return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse<ResponseDataType> = {
+      const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
         data: JSON.stringify(error),

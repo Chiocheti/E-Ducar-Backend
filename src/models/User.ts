@@ -49,7 +49,7 @@ User.init({
 }, {
   sequelize: db,
   tableName: 'users',
-  timestamps: true,
+  timestamps: false,
   underscored: true,
   hooks: {
     beforeCreate: (item) => {
