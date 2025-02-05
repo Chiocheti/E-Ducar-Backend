@@ -30,7 +30,7 @@ module.exports = {
         },
         image: {
           type: Sequelize.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         refresh_token: {
           type: Sequelize.STRING,

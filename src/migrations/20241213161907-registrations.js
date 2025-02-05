@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('registration',
+    await queryInterface.createTable('registrations',
       {
         id: {
           type: Sequelize.UUID,
@@ -38,7 +38,7 @@ module.exports = {
         },
         conclusion_date: {
           type: Sequelize.DATEONLY,
-          allowNull: false,
+          allowNull: true,
         },
         created_at: {
           type: Sequelize.DATE,
@@ -54,6 +54,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable('registration');
+    await queryInterface.dropTable('registrations');
   }
 };

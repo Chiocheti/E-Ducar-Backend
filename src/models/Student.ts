@@ -1,10 +1,9 @@
-import { Model } from "sequelize";
+import { Model, DataTypes } from "sequelize";
 import { v4 as uuidv4 } from 'uuid';
 
 import db from './';
-import sequelize from "sequelize";
 
-class Students extends Model {
+class Student extends Model {
   declare id: string;
   declare name: string;
   declare email: string;
@@ -14,48 +13,48 @@ class Students extends Model {
   declare refreshToken: string;
 }
 
-Students.init({
+Student.init({
   id: {
-    type: sequelize.UUID,
+    type: DataTypes.UUID,
     primaryKey: true,
     unique: true,
     allowNull: false,
-    defaultValue: sequelize.UUIDV4,
+    defaultValue: DataTypes.UUIDV4,
   },
   name: {
-    type: sequelize.STRING,
+    type: DataTypes.STRING,
     allowNull: false,
   },
   email: {
-    type: sequelize.STRING,
+    type: DataTypes.STRING,
     allowNull: false,
   },
   password: {
-    type: sequelize.STRING,
+    type: DataTypes.STRING,
     allowNull: false,
   },
   phone: {
-    type: sequelize.STRING,
+    type: DataTypes.STRING,
     allowNull: false,
   },
   image: {
-    type: sequelize.STRING,
-    allowNull: false,
+    type: DataTypes.STRING,
+    allowNull: true,
   },
   refreshToken: {
-    type: sequelize.STRING,
+    type: DataTypes.STRING,
     allowNull: true,
   },
 }, {
   sequelize: db,
   tableName: 'students',
-  timestamps: true,
+  timestamps: false,
   underscored: true,
   hooks: {
     beforeCreate: (item) => {
       item.id = uuidv4();
     }
   }
-})
+});
 
-export default Students;
+export default Student;

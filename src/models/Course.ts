@@ -1,8 +1,7 @@
-import { Model } from "sequelize";
+import { Model, DataTypes } from "sequelize";
 import { v4 as uuidv4 } from 'uuid';
 
 import db from './';
-import sequelize from "sequelize";
 import User from "./User";
 
 class Course extends Model {
@@ -21,14 +20,14 @@ class Course extends Model {
 
 Course.init({
   id: {
-    type: sequelize.UUID,
+    type: DataTypes.UUID,
     primaryKey: true,
     unique: true,
     allowNull: false,
-    defaultValue: sequelize.UUIDV4,
+    defaultValue: DataTypes.UUIDV4,
   },
   userId: {
-    type: sequelize.UUID,
+    type: DataTypes.UUID,
     allowNull: false,
     references: {
       model: 'users',
@@ -38,47 +37,47 @@ Course.init({
     onDelete: 'CASCADE',
   },
   name: {
-    type: sequelize.STRING,
+    type: DataTypes.STRING,
     allowNull: false,
   },
   isVisible: {
-    type: sequelize.STRING,
+    type: DataTypes.BOOLEAN,
     allowNull: false,
   },
   image: {
-    type: sequelize.STRING,
+    type: DataTypes.STRING,
     allowNull: false,
   },
   description: {
-    type: sequelize.STRING,
+    type: DataTypes.STRING,
     allowNull: false,
   },
   text: {
-    type: sequelize.TEXT,
+    type: DataTypes.TEXT,
     allowNull: false,
   },
   required: {
-    type: sequelize.STRING,
+    type: DataTypes.STRING,
     allowNull: false,
   },
   duration: {
-    type: sequelize.TEXT,
+    type: DataTypes.TEXT,
     allowNull: false,
   },
   support: {
-    type: sequelize.INTEGER,
+    type: DataTypes.INTEGER,
     allowNull: false,
     defaultValue: 0,
   },
   price: {
-    type: sequelize.FLOAT,
+    type: DataTypes.FLOAT,
     allowNull: false,
     defaultValue: 0,
   },
 }, {
   sequelize: db,
   tableName: 'courses',
-  timestamps: true,
+  timestamps: false,
   underscored: true,
   hooks: {
     beforeCreate: (item) => {
@@ -89,8 +88,12 @@ Course.init({
 
 Course.belongsTo(User, {
   foreignKey: 'userId',
-  as: 'users',
-})
+  as: 'user',
+});
+
+User.hasMany(Course, {
+  foreignKey: 'userId',
+  as: 'courses',
+});
 
 export default Course;
-

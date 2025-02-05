@@ -1,58 +1,59 @@
-import { Model } from "sequelize";
+import { Model, DataTypes } from "sequelize";
 import { v4 as uuidv4 } from 'uuid';
 
 import db from './';
-import sequelize from "sequelize";
-import Students from "./Student";
+
+import Student from "./Student";
 import Course from "./Course";
 
 class Registration extends Model {
   declare id: string;
   declare studentId: string;
   declare courseId: string;
-  declare data: string;
-}
+  declare registerDate: string;
+  declare conclusionDate: string | null;
+};
 
 Registration.init({
   id: {
-    type: sequelize.UUID,
+    type: DataTypes.UUID,
     primaryKey: true,
     unique: true,
     allowNull: false,
-    defaultValue: sequelize.UUIDV4,
+    defaultValue: DataTypes.UUIDV4,
   },
   studentId: {
-    type: sequelize.UUID,
+    type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: 'students',
-      key: 'id'
+      model: "students",
+      key: "id",
     },
-    onUpdate: 'CASCADE',
-    onDelete: 'CASCADE',
+    onUpdate: "CASCADE",
+    onDelete: "CASCADE",
   },
   courseId: {
-    type: sequelize.UUID,
+    type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: 'courses',
-      key: 'id'
+      model: "courses",
+      key: "id",
     },
-    onUpdate: 'CASCADE',
-    onDelete: 'CASCADE',
+    onUpdate: "CASCADE",
+    onDelete: "CASCADE",
   },
   registerDate: {
-    type: sequelize.DATEONLY,
+    type: DataTypes.DATEONLY,
     allowNull: false,
   },
   conclusionDate: {
-    type: sequelize.DATEONLY,
-    allowNull: false,
+    type: DataTypes.DATEONLY,
+    allowNull: true,
   },
 }, {
   sequelize: db,
   tableName: 'registrations',
-  timestamps: true,
+  timestamps: false,
   underscored: true,
   hooks: {
     beforeCreate: (item) => {
@@ -61,18 +62,38 @@ Registration.init({
   }
 })
 
-Students.belongsToMany(Course, {
+Registration.belongsTo(Student, {
   foreignKey: 'studentId',
-  otherKey: 'courseId',
-  as: 'courses',
-  through: Registration
+  as: 'student'
 });
 
-Course.belongsToMany(Students, {
-  foreignKey: 'courseId',
-  otherKey: 'studentId',
-  as: 'students',
-  through: Registration
+Student.hasMany(Registration, {
+  foreignKey: 'studentId',
+  as: 'registrations'
 });
+
+Registration.belongsTo(Course, {
+  foreignKey: 'courseId',
+  as: 'course'
+});
+
+Course.hasMany(Registration, {
+  foreignKey: 'courseId',
+  as: 'registrations'
+});
+
+// Funciona
+
+// Student.belongsToMany(Course, {
+//   through: Registration,
+//   foreignKey: "studentId",
+//   as: "courses",
+// });
+
+// Course.belongsToMany(Student, {
+//   through: Registration,
+//   foreignKey: "courseId",
+//   as: "students",
+// });
 
 export default Registration;
