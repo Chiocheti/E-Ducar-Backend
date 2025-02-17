@@ -1,11 +1,11 @@
 import { Response, Request } from "express";
-import z from "zod";
-import User from "../models/User";
 import { v4 as uuidv4 } from 'uuid';
-import bcrypt from 'bcrypt'
-import { ExpectedApiResponse } from "../Types/ApiTypes";
+import z from "zod";
+import bcrypt from 'bcrypt';
 import fs from 'fs';
 import path from "path";
+import User from "../models/User";
+import { ExpectedApiResponse } from "../Types/ApiTypes";
 
 const createUserSchema = z.object({
   name: z.string(),
@@ -93,7 +93,7 @@ const UserController = {
     try {
       const teachers = await User.findAll({
         where: { isTeacher: true },
-        attributes: ['name', 'id']
+        attributes: ['name', 'id', 'image']
       });
 
       const apiResponse: ExpectedApiResponse = {
