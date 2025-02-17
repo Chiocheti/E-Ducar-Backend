@@ -12,6 +12,7 @@ class Registration extends Model {
   declare courseId: string;
   declare registerDate: string;
   declare conclusionDate: string | null;
+  declare supportDate: string | null;
 };
 
 Registration.init({
@@ -47,6 +48,10 @@ Registration.init({
     allowNull: false,
   },
   conclusionDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+  },
+  supportDate: {
     type: DataTypes.DATEONLY,
     allowNull: true,
   },

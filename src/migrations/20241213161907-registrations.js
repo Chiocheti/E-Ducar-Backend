@@ -40,6 +40,10 @@ module.exports = {
           type: Sequelize.DATEONLY,
           allowNull: true,
         },
+        support_date: {
+          type: Sequelize.DATEONLY,
+          allowNull: true,
+        },
         created_at: {
           type: Sequelize.DATE,
           allowNull: false,
