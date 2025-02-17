@@ -6,6 +6,10 @@ import { ExpectedApiResponse } from "../Types/ApiTypes";
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from "path";
+import Lesson from "../models/Lesson";
+import Exam from "../models/Exams";
+import Question from "../models/Question";
+import QuestionOption from "../models/QuestionOption";
 
 const createCourseSchema = z.object({
   description: z.string(),
@@ -16,11 +20,32 @@ const createCourseSchema = z.object({
   support: z.number(),
   text: z.string(),
   userId: z.string(),
+  lessons: z.array(z.object({
+    title: z.string(),
+    description: z.string(),
+    order: z.number(),
+    videoLink: z.string(),
+  })),
+  exams: z.array(z.object({
+    title: z.string(),
+    description: z.string(),
+    order: z.number(),
+    questions: z.array(z.object({
+      question: z.string(),
+      order: z.number(),
+      questionOptions: z.array(z.object({
+        answer: z.string(),
+        isAnswer: z.boolean(),
+        order: z.number(),
+      })),
+    }))
+  })),
 });
 
 type CreateCourseType = z.infer<typeof createCourseSchema>;
 
 const updateCourseSchema = z.object({
+  id: z.string(),
   description: z.string().optional(),
   duration: z.string().optional(),
   name: z.string().optional(),
@@ -29,6 +54,35 @@ const updateCourseSchema = z.object({
   support: z.number().optional(),
   text: z.string().optional(),
   userId: z.string().optional(),
+  isVisible: z.boolean().optional(),
+  lessons: z.array(z.object({
+    id: z.string().optional(),
+    courseId: z.string().optional(),
+    title: z.string(),
+    description: z.string(),
+    order: z.number(),
+    videoLink: z.string(),
+  })).optional(),
+  exams: z.array(z.object({
+    id: z.string().optional(),
+    courseId: z.string().optional(),
+    title: z.string(),
+    description: z.string(),
+    order: z.number(),
+    questions: z.array(z.object({
+      id: z.string().optional(),
+      examId: z.string().optional(),
+      question: z.string(),
+      order: z.number(),
+      questionOptions: z.array(z.object({
+        id: z.string().optional(),
+        questionId: z.string().optional(),
+        answer: z.string(),
+        isAnswer: z.boolean(),
+        order: z.number(),
+      })),
+    })),
+  })).optional(),
 });
 
 type UpdateCourseType = z.infer<typeof updateCourseSchema>;
@@ -41,9 +95,37 @@ const CourseController = {
           {
             model: User,
             as: 'user',
+          },
+          {
+            model: Lesson,
+            as: 'lessons',
+            separate: true,
+            order: [['order', 'ASC']],
+          },
+          {
+            model: Exam,
+            as: 'exams',
+            separate: true,
+            order: [['order', 'ASC']],
+            include: [
+              {
+                model: Question,
+                as: 'questions',
+                separate: true,
+                order: [['order', 'ASC']],
+                include: [
+                  {
+                    model: QuestionOption,
+                    as: 'questionOptions',
+                    separate: true,
+                    order: [['order', 'ASC']],
+                  }
+                ]
+              }
+            ]
           }
         ],
-        order: ['name']
+        order: [['name', 'ASC']]
       });
 
       const apiResponse: ExpectedApiResponse = {
@@ -73,6 +155,34 @@ const CourseController = {
           {
             model: User,
             as: 'user',
+          },
+          {
+            model: Lesson,
+            as: 'lessons',
+            separate: true,
+            order: [['order', 'ASC']],
+          },
+          {
+            model: Exam,
+            as: 'exams',
+            separate: true,
+            order: [['order', 'ASC']],
+            include: [
+              {
+                model: Question,
+                as: 'questions',
+                separate: true,
+                order: [['order', 'ASC']],
+                include: [
+                  {
+                    model: QuestionOption,
+                    as: 'questionOptions',
+                    separate: true,
+                    order: [['order', 'ASC']],
+                  }
+                ]
+              }
+            ]
           }
         ],
         where: { isVisible: true },
@@ -133,7 +243,30 @@ const CourseController = {
 
       const newCourse = { ...course, image: uniqueName };
 
-      await Course.create({ ...newCourse, isVisible: false });
+      await Course.create({ ...newCourse, isVisible: false }, {
+        include: [
+          {
+            model: Lesson,
+            as: 'lessons'
+          },
+          {
+            model: Exam,
+            as: 'exams',
+            include: [
+              {
+                model: Question,
+                as: 'questions',
+                include: [
+                  {
+                    model: QuestionOption,
+                    as: 'questionOptions'
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      });
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
@@ -156,22 +289,108 @@ const CourseController = {
   },
 
   async update(req: Request, res: Response) {
-    const { id, course }: { id: string, course: UpdateCourseType } = req.body;
+    const { course }: { course: UpdateCourseType } = req.body;
 
     try {
-      const { success, error } = updateCourseSchema.safeParse(course);
+      const { success: courseSuccess, error: courseError } = updateCourseSchema.safeParse(course);
 
-      if (!success) {
+      if (!courseSuccess) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 2,
-          data: JSON.stringify(error),
-        }
+          data: JSON.stringify(courseError),
+        };
 
         return res.status(201).json(apiResponse);
+      };
+
+      const { lessons, exams, ...courseRest } = course;
+
+      await Course.update(courseRest, { where: { id: course.id } });
+
+      if (lessons) {
+        const findLessons = await Lesson.findAll({ where: { courseId: course.id } });
+
+        findLessons.forEach(async (element) => {
+          if (!lessons.find((item) => element.id === item.id)) {
+            await element.destroy();
+          }
+        });
+
+        lessons.forEach(async (element) => {
+          if (element.id) {
+            await Lesson.update(element, { where: { id: element.id } });
+          } else {
+            await Lesson.create({ ...element, courseId: course.id });
+          }
+        });
       }
 
-      await Course.update(course, { where: { id } });
+      if (exams) {
+        const findExams = await Exam.findAll({ where: { courseId: course.id } });
+
+        findExams.forEach(async (element) => {
+          if (!exams.find((item) => element.id === item.id)) {
+            await element.destroy();
+          }
+        });
+
+        exams.forEach(async (exam) => {
+          if (!exam.id) {
+            await Exam.create({ ...exam, courseId: course.id }, {
+              include: [
+                {
+                  model: Question,
+                  as: 'questions',
+                  include: [
+                    {
+                      model: QuestionOption,
+                      as: 'questionOptions'
+                    }
+                  ]
+                }
+              ]
+            });
+          } else {
+            await Exam.update(exam, { where: { id: exam.id } });
+
+            const findQuestions = await Question.findAll({ where: { examId: exam.id } });
+
+            findQuestions.forEach(async (element) => {
+              if (!exam.questions.find((item) => element.id === item.id)) await element.destroy();
+            })
+
+            exam.questions.forEach(async (question) => {
+              if (!question.id) {
+                await Question.create({ ...question, examId: exam.id }, {
+                  include: [
+                    {
+                      model: QuestionOption,
+                      as: 'questionOptions'
+                    }
+                  ]
+                })
+              } else {
+                await Question.update(question, { where: { id: question.id } });
+
+                const findQuestionOptions = await QuestionOption.findAll({ where: { questionId: question.id } });
+
+                findQuestionOptions.forEach(async (element) => {
+                  if (!question.questionOptions.find((item) => element.id === item.id)) await element.destroy();
+                });
+
+                question.questionOptions.forEach(async (questionOption) => {
+                  if (!questionOption.id) {
+                    await QuestionOption.create({ ...questionOption, questionId: question.id });
+                  } else {
+                    await QuestionOption.update(questionOption, { where: { id: questionOption.id } });
+                  }
+                })
+              }
+            })
+          };
+        });
+      }
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
