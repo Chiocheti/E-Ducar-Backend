@@ -8,7 +8,7 @@ export default function authenticate(req: Request, res: Response, next: NextFunc
     const apiResponse: ExpectedApiResponse = {
       success: false,
       type: 1,
-      data: 'Nenhum token enviado'
+      data: JSON.stringify('Nenhum token enviado'),
     }
 
     res.status(201).json(apiResponse);
@@ -17,11 +17,10 @@ export default function authenticate(req: Request, res: Response, next: NextFunc
 
   try {
     if (!process.env.ACCESS_TOKEN_SECRET_KEY) {
-
       const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
-        data: 'ACCESS_TOKEN_SECRET_KEY não está definido'
+        data: JSON.stringify('ACCESS_TOKEN_SECRET_KEY não está definido'),
       }
 
       res.status(201).json(apiResponse);
@@ -31,11 +30,10 @@ export default function authenticate(req: Request, res: Response, next: NextFunc
     try {
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET_KEY);
     } catch (error) {
-
       const apiResponse: ExpectedApiResponse = {
         success: false,
         type: 1,
-        data: 'Token inválido ou expirado'
+        data: JSON.stringify('Token inválido ou expirado'),
       }
 
       res.status(201).json(apiResponse);

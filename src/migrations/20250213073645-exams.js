@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('registrations',
+    await queryInterface.createTable('exams',
       {
         id: {
           type: Sequelize.UUID,
@@ -11,16 +11,6 @@ module.exports = {
           unique: true,
           allowNull: false,
           defaultValue: Sequelize.UUIDV4,
-        },
-        student_id: {
-          type: Sequelize.UUID,
-          allowNull: false,
-          references: {
-            model: 'students',
-            key: 'id'
-          },
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
         },
         course_id: {
           type: Sequelize.UUID,
@@ -32,17 +22,17 @@ module.exports = {
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
         },
-        register_date: {
-          type: Sequelize.DATEONLY,
+        title: {
+          type: Sequelize.STRING,
           allowNull: false,
         },
-        conclusion_date: {
-          type: Sequelize.DATEONLY,
-          allowNull: true,
+        description: {
+          type: Sequelize.TEXT,
+          allowNull: false,
         },
-        support_date: {
-          type: Sequelize.DATEONLY,
-          allowNull: true,
+        order: {
+          type: Sequelize.INTEGER,
+          allowNull: false,
         },
         created_at: {
           type: Sequelize.DATE,
@@ -58,6 +48,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable('registrations');
+    await queryInterface.dropTable('exams');
   }
 };

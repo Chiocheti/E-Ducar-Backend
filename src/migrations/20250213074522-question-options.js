@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('registrations',
+    await queryInterface.createTable('question_options',
       {
         id: {
           type: Sequelize.UUID,
@@ -12,37 +12,27 @@ module.exports = {
           allowNull: false,
           defaultValue: Sequelize.UUIDV4,
         },
-        student_id: {
+        question_id: {
           type: Sequelize.UUID,
           allowNull: false,
           references: {
-            model: 'students',
+            model: 'questions',
             key: 'id'
           },
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
         },
-        course_id: {
-          type: Sequelize.UUID,
-          allowNull: false,
-          references: {
-            model: 'courses',
-            key: 'id'
-          },
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
-        },
-        register_date: {
-          type: Sequelize.DATEONLY,
+        answer: {
+          type: Sequelize.STRING,
           allowNull: false,
         },
-        conclusion_date: {
-          type: Sequelize.DATEONLY,
-          allowNull: true,
+        is_answer: {
+          type: Sequelize.BOOLEAN,
+          allowNull: false,
         },
-        support_date: {
-          type: Sequelize.DATEONLY,
-          allowNull: true,
+        order: {
+          type: Sequelize.INTEGER,
+          allowNull: false,
         },
         created_at: {
           type: Sequelize.DATE,
@@ -58,6 +48,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable('registrations');
+    await queryInterface.dropTable('question_options');
   }
 };

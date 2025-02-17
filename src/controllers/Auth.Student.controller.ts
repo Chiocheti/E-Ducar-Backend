@@ -1,12 +1,11 @@
 import { Response, Request } from "express";
+import bcrypt from 'bcrypt'
 import jwt from "jsonwebtoken"
+import User from "../models/User";
+import Course from "../models/Course";
 import Student from "../models/Student";
 import Registration from "../models/Registration";
-import bcrypt from 'bcrypt'
 import { ExpectedApiResponse } from "../Types/ApiTypes";
-import Course from "../models/Course";
-import User from "../models/User";
-import { TokensType } from "../Types/TokensTypes";
 
 const accessTokenDuration = '7d';
 const refreshTokenDuration = '30d';
