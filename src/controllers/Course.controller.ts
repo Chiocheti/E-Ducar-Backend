@@ -209,6 +209,131 @@ const CourseController = {
     }
   },
 
+  async getById(req: Request, res: Response) {
+    try {
+
+      const { id }: { id: string } = req.body;
+
+      const courses = await Course.findByPk(id, {
+        include: [
+          {
+            model: User,
+            as: 'user',
+          },
+          {
+            model: Lesson,
+            as: 'lessons',
+            separate: true,
+            order: [['order', 'ASC']],
+          },
+          {
+            model: Exam,
+            as: 'exams',
+            separate: true,
+            order: [['order', 'ASC']],
+            include: [
+              {
+                model: Question,
+                as: 'questions',
+                separate: true,
+                order: [['order', 'ASC']],
+                include: [
+                  {
+                    model: QuestionOption,
+                    as: 'questionOptions',
+                    separate: true,
+                    order: [['order', 'ASC']],
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+      });
+
+      const apiResponse: ExpectedApiResponse = {
+        success: true,
+        type: 0,
+        data: JSON.stringify(courses),
+      }
+
+      return res.status(200).json(apiResponse);
+    } catch (error) {
+      console.log(error);
+
+      const apiResponse: ExpectedApiResponse = {
+        success: false,
+        type: 1,
+        data: JSON.stringify(error),
+      }
+
+      return res.status(500).json(apiResponse);
+    }
+  },
+
+  async getByName(req: Request, res: Response) {
+    try {
+
+      const { courseName }: { courseName: string } = req.body;
+
+      const courses = await Course.findOne({
+        include: [
+          {
+            model: User,
+            as: 'user',
+          },
+          {
+            model: Lesson,
+            as: 'lessons',
+            separate: true,
+            order: [['order', 'ASC']],
+          },
+          {
+            model: Exam,
+            as: 'exams',
+            separate: true,
+            order: [['order', 'ASC']],
+            include: [
+              {
+                model: Question,
+                as: 'questions',
+                separate: true,
+                order: [['order', 'ASC']],
+                include: [
+                  {
+                    model: QuestionOption,
+                    as: 'questionOptions',
+                    separate: true,
+                    order: [['order', 'ASC']],
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        where: { name: courseName },
+      });
+
+      const apiResponse: ExpectedApiResponse = {
+        success: true,
+        type: 0,
+        data: JSON.stringify(courses),
+      }
+
+      return res.status(200).json(apiResponse);
+    } catch (error) {
+      console.log(error);
+
+      const apiResponse: ExpectedApiResponse = {
+        success: false,
+        type: 1,
+        data: JSON.stringify(error),
+      }
+
+      return res.status(500).json(apiResponse);
+    }
+  },
+
   async create(req: Request, res: Response) {
     const { file } = req;
     const course: CreateCourseType = JSON.parse(req.body.course);
