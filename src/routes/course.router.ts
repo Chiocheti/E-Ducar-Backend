@@ -17,6 +17,14 @@ courseRoutes.get('/getOpen', async (req: Request, res: Response) => {
   await CourseController.getOpen(req, res);
 });
 
+courseRoutes.post('/getById', async (req: Request, res: Response) => {
+  await CourseController.getById(req, res);
+});
+
+courseRoutes.post('/getByName', async (req: Request, res: Response) => {
+  await CourseController.getByName(req, res);
+});
+
 courseRoutes.post('/create', authenticate, upload.single('image'), async (req: Request, res: Response) => {
   await CourseController.create(req, res);
 });
