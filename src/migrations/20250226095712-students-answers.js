@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("courses", {
+    await queryInterface.createTable("students_answers", {
       id: {
         type: Sequelize.UUID,
         primaryKey: true,
@@ -11,53 +11,45 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.UUIDV4,
       },
-      user_id: {
+      registration_id: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: "users",
+          model: "registrations",
           key: "id",
         },
         onUpdate: "CASCADE",
         onDelete: "CASCADE",
       },
-      name: {
-        type: Sequelize.STRING,
+      exam_id: {
+        type: Sequelize.UUID,
         allowNull: false,
+        references: {
+          model: "exams",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
       },
-      is_visible: {
-        type: Sequelize.BOOLEAN,
+      question_id: {
+        type: Sequelize.UUID,
         allowNull: false,
+        references: {
+          model: "questions",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
       },
-      image: {
-        type: Sequelize.STRING,
+      question_option_id: {
+        type: Sequelize.UUID,
         allowNull: false,
-      },
-      description: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      text: {
-        type: Sequelize.TEXT,
-        allowNull: false,
-      },
-      required: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      duration: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      support: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-      },
-      price: {
-        type: Sequelize.FLOAT,
-        allowNull: false,
-        defaultValue: 0,
+        references: {
+          model: "question_options",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
       },
       created_at: {
         type: Sequelize.DATE,
@@ -73,6 +65,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable("courses");
+    await queryInterface.dropTable("students_answers");
   },
 };

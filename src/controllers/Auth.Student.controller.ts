@@ -1,37 +1,51 @@
 import { Response, Request } from "express";
-import bcrypt from 'bcrypt'
-import jwt from "jsonwebtoken"
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import User from "../models/User";
 import Course from "../models/Course";
 import Student from "../models/Student";
 import Registration from "../models/Registration";
 import { ExpectedApiResponse } from "../Types/ApiTypes";
+import LessonProgress from "../models/LessonProgress";
+import Lesson from "../models/Lesson";
 
-const accessTokenDuration = '7d';
-const refreshTokenDuration = '30d';
+const accessTokenDuration = "7d";
+const refreshTokenDuration = "30d";
 
 const AuthStudentController = {
   async login(req: Request, res: Response) {
     try {
-      const { email, password }: { email: string, password: string } = req.body;
+      const { email, password }: { email: string; password: string } = req.body;
 
       const student = await Student.findOne({
         include: [
           {
             model: Registration,
-            as: 'registrations',
+            as: "registrations",
             include: [
               {
                 model: Course,
-                as: 'course',
+                as: "course",
                 include: [
                   {
                     model: User,
-                    as: 'user',
-                  }
-                ]
-              }
-            ]
+                    as: "user",
+                  },
+                ],
+              },
+              {
+                model: LessonProgress,
+                as: "lessonsProgress",
+                separate: true,
+                include: [
+                  {
+                    model: Lesson,
+                    as: "lesson",
+                  },
+                ],
+                order: [["lesson", "order"]],
+              },
+            ],
           },
         ],
         where: { email },
@@ -41,8 +55,8 @@ const AuthStudentController = {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: 'Email ou senha incorretos',
-        }
+          data: "Email ou senha incorretos",
+        };
 
         return res.status(201).json(apiResponse);
       }
@@ -53,14 +67,22 @@ const AuthStudentController = {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: 'Email ou senha incorretos',
-        }
+          data: "Email ou senha incorretos",
+        };
 
         return res.status(201).json(apiResponse);
-      };
+      }
 
-      const accessToken = jwt.sign({ id: student.id }, `${process.env.ACCESS_TOKEN_SECRET_KEY}`, { expiresIn: accessTokenDuration });
-      const refreshToken = jwt.sign({ id: student.id }, `${process.env.REFRESH_TOKEN_SECRET_KEY}`, { expiresIn: refreshTokenDuration });
+      const accessToken = jwt.sign(
+        { id: student.id },
+        `${process.env.ACCESS_TOKEN_SECRET_KEY}`,
+        { expiresIn: accessTokenDuration }
+      );
+      const refreshToken = jwt.sign(
+        { id: student.id },
+        `${process.env.REFRESH_TOKEN_SECRET_KEY}`,
+        { expiresIn: refreshTokenDuration }
+      );
 
       await student.update({ refreshToken });
 
@@ -73,7 +95,7 @@ const AuthStudentController = {
             accessToken,
             refreshToken,
           },
-        })
+        }),
       };
 
       return res.status(200).json(apiResponse);
@@ -84,9 +106,9 @@ const AuthStudentController = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
-      }
+      };
 
-      return res.status(500).json(apiResponse)
+      return res.status(500).json(apiResponse);
     }
   },
 
@@ -100,10 +122,10 @@ const AuthStudentController = {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: 'Estudante não encontrado',
-        }
+          data: "Estudante não encontrado",
+        };
 
-        return res.status(201).json(apiResponse)
+        return res.status(201).json(apiResponse);
       }
 
       await student.update({ refreshToken: null });
@@ -111,10 +133,10 @@ const AuthStudentController = {
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: 'Deslogado com sucesso',
-      }
+        data: "Deslogado com sucesso",
+      };
 
-      return res.status(200).json(apiResponse)
+      return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
@@ -122,9 +144,9 @@ const AuthStudentController = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
-      }
+      };
 
-      return res.status(500).json(apiResponse)
+      return res.status(500).json(apiResponse);
     }
   },
 };
