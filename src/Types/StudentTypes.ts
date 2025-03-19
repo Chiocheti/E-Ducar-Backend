@@ -5,6 +5,6 @@ export type StudentType = {
   name: string;
   email: string;
   phone: string;
-  image: string,
+  image: string;
   registrations?: RegistrationType[];
 };

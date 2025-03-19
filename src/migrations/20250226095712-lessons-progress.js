@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("courses", {
+    await queryInterface.createTable("lessons_progress", {
       id: {
         type: Sequelize.UUID,
         primaryKey: true,
@@ -11,53 +11,33 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.UUIDV4,
       },
-      user_id: {
+      registration_id: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: "users",
+          model: "registrations",
           key: "id",
         },
         onUpdate: "CASCADE",
         onDelete: "CASCADE",
       },
-      name: {
-        type: Sequelize.STRING,
+      lesson_id: {
+        type: Sequelize.UUID,
         allowNull: false,
+        references: {
+          model: "lessons",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
       },
-      is_visible: {
+      completed: {
         type: Sequelize.BOOLEAN,
         allowNull: false,
       },
-      image: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      description: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      text: {
-        type: Sequelize.TEXT,
-        allowNull: false,
-      },
-      required: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      duration: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      support: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-      },
-      price: {
-        type: Sequelize.FLOAT,
-        allowNull: false,
-        defaultValue: 0,
+      watched_at: {
+        type: Sequelize.DATE,
+        allowNull: true,
       },
       created_at: {
         type: Sequelize.DATE,
@@ -73,6 +53,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable("courses");
+    await queryInterface.dropTable("lessons_progress");
   },
 };

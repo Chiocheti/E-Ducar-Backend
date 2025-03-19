@@ -1,8 +1,8 @@
 import { Response, Request } from "express";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 import z from "zod";
-import bcrypt from 'bcrypt';
-import fs from 'fs';
+import bcrypt from "bcrypt";
+import fs from "fs";
 import path from "path";
 import User from "../models/User";
 import { ExpectedApiResponse } from "../Types/ApiTypes";
@@ -28,7 +28,7 @@ type UpdateUserType = z.infer<typeof updateUserSchema>;
 const UserController = {
   async getAll(req: Request, res: Response) {
     try {
-      const users = await User.findAll({ order: ['name'] });
+      const users = await User.findAll({ order: ["name"] });
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
@@ -44,7 +44,7 @@ const UserController = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
-      }
+      };
 
       return res.status(500).json(apiResponse);
     }
@@ -55,15 +55,15 @@ const UserController = {
 
     try {
       const user = await User.findOne({
-        attributes: ['id', 'name', 'username', 'isTeacher', 'image'],
-        where: { id }
+        attributes: ["id", "name", "username", "isTeacher", "image"],
+        where: { id },
       });
 
       if (!user) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: 'Usuario não encontrado',
+          data: "Usuario não encontrado",
         };
 
         return res.status(201).json(apiResponse);
@@ -83,7 +83,7 @@ const UserController = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
-      }
+      };
 
       return res.status(500).json(apiResponse);
     }
@@ -93,7 +93,7 @@ const UserController = {
     try {
       const teachers = await User.findAll({
         where: { isTeacher: true },
-        attributes: ['name', 'id', 'image']
+        attributes: ["name", "id", "image"],
       });
 
       const apiResponse: ExpectedApiResponse = {
@@ -110,7 +110,7 @@ const UserController = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
-      }
+      };
 
       return res.status(500).json(apiResponse);
     }
@@ -125,7 +125,7 @@ const UserController = {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: 'Imagem é obrigatória',
+          data: "Imagem é obrigatória",
         };
 
         return res.status(201).json(apiResponse);
@@ -143,20 +143,22 @@ const UserController = {
         return res.status(201).json(apiResponse);
       }
 
-      const findUser = await User.findOne({ where: { username: user.username } })
+      const findUser = await User.findOne({
+        where: { username: user.username },
+      });
 
       if (findUser) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: 'Este username ja está em uso',
-        }
+          data: "Este username ja está em uso",
+        };
 
         return res.status(201).json(apiResponse);
       }
 
       const uniqueName = `${uuidv4()}-${file.originalname}`;
-      const uploadPath = path.join(__dirname, '..', 'uploads', uniqueName);
+      const uploadPath = path.join(__dirname, "..", "uploads", uniqueName);
 
       fs.writeFileSync(uploadPath, file.buffer);
 
@@ -164,15 +166,15 @@ const UserController = {
         ...user,
         password: bcrypt.hashSync(user.password, 10),
         image: uniqueName,
-      }
+      };
 
       await User.create(newUser);
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: 'Usuario cadastrado com sucesso',
-      }
+        data: "Usuario cadastrado com sucesso",
+      };
 
       return res.status(200).json(apiResponse);
     } catch (error) {
@@ -182,14 +184,14 @@ const UserController = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
-      }
+      };
 
       return res.status(500).json(apiResponse);
     }
   },
 
   async update(req: Request, res: Response) {
-    const { id, user }: { id: string, user: UpdateUserType } = req.body;
+    const { id, user }: { id: string; user: UpdateUserType } = req.body;
 
     try {
       const { success, error } = updateUserSchema.safeParse(user);
@@ -199,22 +201,22 @@ const UserController = {
           success: false,
           type: 2,
           data: JSON.stringify(error),
-        }
+        };
 
         return res.status(201).json(apiResponse);
       }
 
       if (user.password) {
-        user.password = bcrypt.hashSync(user.password, 10)
-      };
+        user.password = bcrypt.hashSync(user.password, 10);
+      }
 
       await User.update(user, { where: { id } });
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: 'Usuario editado com sucesso',
-      }
+        data: "Usuario editado com sucesso",
+      };
 
       return res.status(200).json(apiResponse);
     } catch (error) {
@@ -224,7 +226,7 @@ const UserController = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
-      }
+      };
 
       return res.status(500).json(apiResponse);
     }
@@ -232,25 +234,26 @@ const UserController = {
 
   async updateImage(req: Request, res: Response) {
     const { file } = req;
-    const { imageLink, userId }: { imageLink: string, userId: string } = req.body;
+    const { imageLink, userId }: { imageLink: string; userId: string } =
+      req.body;
 
     try {
       if (!file) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: 'Imagem é obrigatória',
+          data: "Imagem é obrigatória",
         };
         return res.status(201).json(apiResponse);
       }
 
-      const filePath = path.join(__dirname, '..', 'uploads', imageLink);
+      const filePath = path.join(__dirname, "..", "uploads", imageLink);
 
       if (!fs.existsSync(filePath)) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: 'Arquivo não encontrado',
+          data: "Arquivo não encontrado",
         };
         return res.status(201).json(apiResponse);
       }
@@ -258,17 +261,17 @@ const UserController = {
       fs.unlinkSync(filePath);
 
       const uniqueName = `${uuidv4()}-${file.originalname}`;
-      const uploadPath = path.join(__dirname, '..', 'uploads', uniqueName);
+      const uploadPath = path.join(__dirname, "..", "uploads", uniqueName);
 
       fs.writeFileSync(uploadPath, file.buffer);
 
-      await User.update({ image: uniqueName }, { where: { id: userId } })
+      await User.update({ image: uniqueName }, { where: { id: userId } });
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: 'Foto de perfil editada com sucesso',
-      }
+        data: "Foto de perfil editada com sucesso",
+      };
 
       return res.status(200).json(apiResponse);
     } catch (error) {
@@ -278,7 +281,7 @@ const UserController = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
-      }
+      };
 
       return res.status(500).json(apiResponse);
     }

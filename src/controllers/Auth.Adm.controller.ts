@@ -1,29 +1,27 @@
-import User from "../models/User"
-import { Response, Request } from "express"
-import jwt from "jsonwebtoken"
-import bcrypt from 'bcrypt';
+import User from "../models/User";
+import { Response, Request } from "express";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 import { ExpectedApiResponse } from "../Types/ApiTypes";
-import Course from "../models/Course";
-import { UserType } from "../Types/UserTypes";
-import { TokensType } from "../Types/TokensTypes";
 
-const accessTokenDuration = '7d';
-const refreshTokenDuration = '30d';
+const accessTokenDuration = "7d";
+const refreshTokenDuration = "30d";
 
 const AuthAdmController = {
   async login(req: Request, res: Response) {
-    const { username, password }: { username: string, password: string } = req.body;
+    const { username, password }: { username: string; password: string } =
+      req.body;
     try {
       const user = await User.findOne({
-        where: { username }
+        where: { username },
       });
 
       if (!user) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: 'Usuário ou senha incorretos',
-        }
+          data: "Usuário ou senha incorretos",
+        };
 
         return res.status(201).json(apiResponse);
       }
@@ -34,14 +32,22 @@ const AuthAdmController = {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: 'Usuário ou senha incorretos',
-        }
+          data: "Usuário ou senha incorretos",
+        };
 
         return res.status(201).json(apiResponse);
       }
 
-      const accessToken = jwt.sign({ id: user.id }, `${process.env.ACCESS_TOKEN_SECRET_KEY}`, { expiresIn: accessTokenDuration });
-      const refreshToken = jwt.sign({ id: user.id }, `${process.env.REFRESH_TOKEN_SECRET_KEY}`, { expiresIn: refreshTokenDuration });
+      const accessToken = jwt.sign(
+        { id: user.id },
+        `${process.env.ACCESS_TOKEN_SECRET_KEY}`,
+        { expiresIn: accessTokenDuration }
+      );
+      const refreshToken = jwt.sign(
+        { id: user.id },
+        `${process.env.REFRESH_TOKEN_SECRET_KEY}`,
+        { expiresIn: refreshTokenDuration }
+      );
 
       await user.update({ refreshToken });
 
@@ -55,7 +61,7 @@ const AuthAdmController = {
             refreshToken,
           },
         }),
-      }
+      };
 
       return res.status(200).json(apiResponse);
     } catch (error) {
@@ -65,26 +71,25 @@ const AuthAdmController = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
-      }
+      };
 
-      return res.status(500).json(apiResponse)
+      return res.status(500).json(apiResponse);
     }
   },
 
   async logout(req: Request, res: Response) {
     const { id }: { id: string } = req.body;
     try {
-
       const user = await User.findOne({ where: { id } });
 
       if (!user) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: 'Usuário não encontrado',
-        }
+          data: "Usuário não encontrado",
+        };
 
-        return res.status(201).json(apiResponse)
+        return res.status(201).json(apiResponse);
       }
 
       await user.update({ refreshToken: null });
@@ -92,10 +97,10 @@ const AuthAdmController = {
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: 'Deslogado com sucesso',
-      }
+        data: "Deslogado com sucesso",
+      };
 
-      return res.status(200).json(apiResponse)
+      return res.status(200).json(apiResponse);
     } catch (error) {
       console.log(error);
 
@@ -103,11 +108,11 @@ const AuthAdmController = {
         success: false,
         type: 1,
         data: JSON.stringify(error),
-      }
+      };
 
-      return res.status(500).json(apiResponse)
+      return res.status(500).json(apiResponse);
     }
-  }
+  },
 };
 
 export default AuthAdmController;

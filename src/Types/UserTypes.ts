@@ -5,6 +5,6 @@ export type UserType = {
   username: string;
   name: string;
   isTeacher: boolean;
-  image: string,
-  courses?: CourseType[]
+  image: string;
+  courses?: CourseType[];
 };
