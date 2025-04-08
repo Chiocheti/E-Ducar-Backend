@@ -9,7 +9,6 @@ class LessonProgress extends Model {
   declare id: string;
   declare registrationId: string;
   declare lessonId: string;
-  declare completed: boolean;
   declare watchedAt: string;
 }
 
@@ -41,10 +40,6 @@ LessonProgress.init(
       },
       onUpdate: "CASCADE",
       onDelete: "CASCADE",
-    },
-    completed: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
     },
     watchedAt: {
       type: DataTypes.DATE,

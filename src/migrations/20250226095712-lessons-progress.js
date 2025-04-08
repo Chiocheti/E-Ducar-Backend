@@ -31,10 +31,6 @@ module.exports = {
         onUpdate: "CASCADE",
         onDelete: "CASCADE",
       },
-      completed: {
-        type: Sequelize.BOOLEAN,
-        allowNull: false,
-      },
       watched_at: {
         type: Sequelize.DATE,
         allowNull: true,
