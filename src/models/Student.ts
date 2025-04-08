@@ -11,6 +11,7 @@ class Student extends Model {
   declare phone: string;
   declare image: string;
   declare refreshToken: string;
+  declare lastLogin: string;
 }
 
 Student.init(
@@ -44,6 +45,10 @@ Student.init(
     },
     refreshToken: {
       type: DataTypes.STRING,
+      allowNull: true,
+    },
+    lastLogin: {
+      type: DataTypes.DATE,
       allowNull: true,
     },
   },
