@@ -24,6 +24,7 @@ const updateStudentSchema = z.object({
   phone: z.string().optional(),
   email: z.string().optional(),
   password: z.string().optional(),
+  lastLogin: z.string().optional(),
 });
 
 type UpdateStudentType = z.infer<typeof updateStudentSchema>;

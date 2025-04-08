@@ -15,7 +15,11 @@ const refreshTokenDuration = "30d";
 const AuthStudentController = {
   async login(req: Request, res: Response) {
     try {
-      const { email, password }: { email: string; password: string } = req.body;
+      const {
+        email,
+        password,
+        time,
+      }: { email: string; password: string; time: string } = req.body;
 
       const student = await Student.findOne({
         include: [
@@ -84,7 +88,10 @@ const AuthStudentController = {
         { expiresIn: refreshTokenDuration }
       );
 
-      await student.update({ refreshToken });
+      await student.update({
+        refreshToken,
+        lastLogin: time,
+      });
 
       const apiResponse: ExpectedApiResponse = {
         success: true,

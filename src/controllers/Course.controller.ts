@@ -304,6 +304,7 @@ const CourseController = {
           "support",
           "image",
           "price",
+          "text",
         ],
         include: [
           {
@@ -595,6 +596,7 @@ const CourseController = {
           type: 3,
           data: "Arquivo não encontrado",
         };
+
         return res.status(201).json(apiResponse);
       }
 

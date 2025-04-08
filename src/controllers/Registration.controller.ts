@@ -20,10 +20,6 @@ const createRegistrationSchema = z.object({
 type CreateRegistrationType = z.infer<typeof createRegistrationSchema>;
 
 const updateLessonProgressSchema = z.object({
-  id: z.string(),
-  registrationId: z.string().optional(),
-  lessonId: z.string().optional(),
-  completed: z.boolean().optional(),
   watchedAt: z.string().optional(),
 });
 
@@ -89,7 +85,6 @@ const RegistrationController = {
           const lessonProgress = {
             lessonId: lesson.id,
             registrationId,
-            completed: false,
             watchedAt: null,
           };
 
@@ -190,8 +185,10 @@ const RegistrationController = {
   },
 
   async updateLessonProgress(req: Request, res: Response) {
-    const { lessonProgress }: { lessonProgress: UpdateLessonProgressType } =
-      req.body;
+    const {
+      id,
+      lessonProgress,
+    }: { id: string; lessonProgress: UpdateLessonProgressType } = req.body;
 
     try {
       const { success, error } =
@@ -208,7 +205,7 @@ const RegistrationController = {
       }
 
       await LessonProgress.update(lessonProgress, {
-        where: { id: lessonProgress.id },
+        where: { id },
       });
 
       const apiResponse: ExpectedApiResponse = {
