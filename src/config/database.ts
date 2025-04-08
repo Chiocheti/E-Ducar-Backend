@@ -12,6 +12,7 @@ const databaseConfig: Options = {
   port: Number(DB_PORT) || 3306,
   dialect: (DB_DIALECT as Dialect) || "mysql",
   pool: { max: 10 },
+  timezone: "-03:00",
 };
 
 export = databaseConfig;
