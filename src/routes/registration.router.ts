@@ -20,6 +20,14 @@ registrationRoutes.post(
   }
 );
 
+registrationRoutes.put(
+  "/update",
+  authenticate,
+  async (req: Request, res: Response) => {
+    await RegistrationController.update(req, res);
+  }
+);
+
 registrationRoutes.post(
   "/createStudentAnswer",
   authenticate,
