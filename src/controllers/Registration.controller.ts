@@ -9,6 +9,7 @@ import Question from "../models/Question";
 import QuestionOption from "../models/QuestionOption";
 import LessonProgress from "../models/LessonProgress";
 import StudentAnswer from "../models/StudentAnswer";
+import Ticket from "../models/Ticket";
 
 const createRegistrationSchema = z.object({
   studentId: z.string(),
@@ -18,6 +19,12 @@ const createRegistrationSchema = z.object({
 });
 
 type CreateRegistrationType = z.infer<typeof createRegistrationSchema>;
+
+const updateRegistrationSchema = z.object({
+  stopped: z.boolean().optional(),
+});
+
+type UpdateRegistrationType = z.infer<typeof updateRegistrationSchema>;
 
 const updateLessonProgressSchema = z.object({
   watchedAt: z.string().optional(),
@@ -38,7 +45,11 @@ type CreateStudentAnswerType = z.infer<typeof createStudentAnswerSchema>;
 
 const RegistrationController = {
   async create(req: Request, res: Response) {
-    const { registration }: { registration: CreateRegistrationType } = req.body;
+    const {
+      registration,
+      ticket,
+    }: { registration: CreateRegistrationType; ticket: string | null } =
+      req.body;
 
     try {
       const { success, error } =
@@ -65,15 +76,47 @@ const RegistrationController = {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: "Voce ja está matriculado nesse curso",
+          data: JSON.stringify("Voce ja está matriculado nesse curso"),
         };
 
         return res.status(201).json(apiResponse);
       }
 
+      let ticketId = null;
+
+      if (ticket) {
+        const findTicket = await Ticket.findOne({ where: { code: ticket } });
+
+        if (!findTicket) {
+          const apiResponse: ExpectedApiResponse = {
+            success: false,
+            type: 3,
+            data: JSON.stringify("Esse cupom não existe"),
+          };
+
+          return res.status(201).json(apiResponse);
+        }
+
+        if (findTicket.used) {
+          const apiResponse: ExpectedApiResponse = {
+            success: false,
+            type: 3,
+            data: JSON.stringify("Esse cupom não  é mais valido"),
+          };
+
+          return res.status(201).json(apiResponse);
+        }
+
+        await findTicket.update({ used: true });
+
+        ticketId = findTicket.id;
+      }
+
       const { id: registrationId } = await Registration.create({
         ...registration,
+        ticketId,
         conclusionDate: null,
+        stopped: false,
       });
 
       const findLessons = await Lesson.findAll({
@@ -95,7 +138,52 @@ const RegistrationController = {
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: "Cadastro feito com sucesso",
+        data: JSON.stringify("Cadastro feito com sucesso"),
+      };
+
+      return res.status(200).json(apiResponse);
+    } catch (error) {
+      console.log(error);
+
+      const apiResponse: ExpectedApiResponse = {
+        success: false,
+        type: 1,
+        data: JSON.stringify(error),
+      };
+
+      return res.status(500).json(apiResponse);
+    }
+  },
+
+  async update(req: Request, res: Response) {
+    const {
+      registration,
+      id,
+    }: {
+      registration: UpdateRegistrationType;
+      id: string;
+    } = req.body;
+
+    try {
+      const { success, error } =
+        updateRegistrationSchema.safeParse(registration);
+
+      if (!success) {
+        const apiResponse: ExpectedApiResponse = {
+          success: false,
+          type: 2,
+          data: JSON.stringify(error),
+        };
+
+        return res.status(201).json(apiResponse);
+      }
+
+      await Registration.update(registration, { where: { id } });
+
+      const apiResponse: ExpectedApiResponse = {
+        success: true,
+        type: 0,
+        data: JSON.stringify("Registro atualizado com sucesso"),
       };
 
       return res.status(200).json(apiResponse);

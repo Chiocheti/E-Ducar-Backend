@@ -11,6 +11,16 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.UUIDV4,
       },
+      collaborator_id: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: {
+          model: "collaborators",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      },
       code: {
         type: Sequelize.STRING,
         unique: true,

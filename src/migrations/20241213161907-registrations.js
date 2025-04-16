@@ -31,6 +31,16 @@ module.exports = {
         onUpdate: "CASCADE",
         onDelete: "CASCADE",
       },
+      ticket_id: {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: "tickets",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      },
       register_date: {
         type: Sequelize.DATEONLY,
         allowNull: false,
@@ -42,6 +52,11 @@ module.exports = {
       support_date: {
         type: Sequelize.DATEONLY,
         allowNull: true,
+      },
+      stopped: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
       },
       created_at: {
         type: Sequelize.DATE,

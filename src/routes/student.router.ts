@@ -21,6 +21,10 @@ studentRoutes.post("/create", async (req: Request, res: Response) => {
   await StudentController.create(req, res);
 });
 
+studentRoutes.post("/trashCreate", async (req: Request, res: Response) => {
+  await StudentController.trashCreate(req, res);
+});
+
 studentRoutes.put(
   "/update",
   authenticate,

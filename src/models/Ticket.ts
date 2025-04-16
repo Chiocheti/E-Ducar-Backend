@@ -2,9 +2,11 @@ import { Model, DataTypes } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 
 import db from "./";
+import Collaborator from "./Collaborator";
 
 class Ticket extends Model {
   declare id: string;
+  declare collaboratorId: string;
   declare code: string;
   declare used: boolean;
 }
@@ -17,6 +19,16 @@ Ticket.init(
       unique: true,
       allowNull: false,
       defaultValue: DataTypes.UUIDV4,
+    },
+    collaboratorId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: "collaborators",
+        key: "id",
+      },
+      onUpdate: "CASCADE",
+      onDelete: "CASCADE",
     },
     code: {
       type: DataTypes.STRING,
@@ -40,5 +52,15 @@ Ticket.init(
     },
   }
 );
+
+Ticket.belongsTo(Collaborator, {
+  foreignKey: "collaboratorId",
+  as: "collaborator",
+});
+
+Collaborator.hasMany(Ticket, {
+  foreignKey: "collaboratorId",
+  as: "tickets",
+});
 
 export default Ticket;
