@@ -2,6 +2,11 @@ import { Response, Request } from "express";
 import z from "zod";
 import { ExpectedApiResponse } from "../Types/ApiTypes";
 import Ticket from "../models/Ticket";
+import Registration from "../models/Registration";
+import Student from "../models/Student";
+import Course from "../models/Course";
+import { Op } from "sequelize";
+import Collaborator from "../models/Collaborator";
 
 const createTicketsSchema = z.array(
   z.object({
@@ -13,6 +18,153 @@ const createTicketsSchema = z.array(
 type CreateTicketsType = z.infer<typeof createTicketsSchema>;
 
 const TicketController = {
+  async findAll(req: Request, res: Response) {
+    try {
+      const tickets = await Ticket.findAll();
+
+      const apiResponse: ExpectedApiResponse = {
+        success: true,
+        type: 0,
+        data: JSON.stringify(tickets),
+      };
+
+      return res.status(200).json(apiResponse);
+    } catch (error) {
+      console.log(error);
+
+      const apiResponse: ExpectedApiResponse = {
+        success: false,
+        type: 1,
+        data: JSON.stringify(error),
+      };
+
+      return res.status(500).json(apiResponse);
+    }
+  },
+
+  async search(req: Request, res: Response) {
+    try {
+      const {
+        collaboratorId,
+        offset,
+        pageRange,
+      }: {
+        collaboratorId: string | null;
+        offset: number;
+        pageRange: number;
+      } = req.body;
+
+      if (collaboratorId === null) {
+        const students = await Student.findAll({
+          include: [
+            {
+              model: Registration,
+              as: "registrations",
+              required: true,
+              where: { ticketId: { [Op.is]: null } },
+              include: [
+                {
+                  model: Ticket,
+                  as: "ticket",
+                },
+                {
+                  model: Course,
+                  as: "course",
+                },
+              ],
+            },
+          ],
+          offset,
+          limit: pageRange || undefined,
+          order: ["name"],
+        });
+
+        const total = await Student.count({
+          distinct: true,
+          col: "id",
+          include: [
+            {
+              model: Registration,
+              as: "registrations",
+              required: true,
+              where: { ticketId: { [Op.is]: null } },
+            },
+          ],
+        });
+
+        const apiResponse: ExpectedApiResponse = {
+          success: true,
+          type: 0,
+          data: JSON.stringify({ students, total }),
+        };
+
+        return res.status(200).json(apiResponse);
+      }
+
+      const students = await Student.findAll({
+        include: [
+          {
+            model: Registration,
+            as: "registrations",
+            include: [
+              {
+                model: Ticket,
+                as: "ticket",
+                required: true,
+                where: { collaboratorId },
+              },
+              {
+                model: Course,
+                as: "course",
+              },
+            ],
+          },
+        ],
+        offset,
+        limit: pageRange || 100000,
+        order: ["name"],
+      });
+
+      const total = await Student.count({
+        distinct: true,
+        col: "id",
+        include: [
+          {
+            model: Registration,
+            as: "registrations",
+            required: true,
+            include: [
+              {
+                model: Ticket,
+                as: "ticket",
+                required: true,
+                where: { collaboratorId },
+              },
+            ],
+          },
+        ],
+      });
+
+      const apiResponse: ExpectedApiResponse = {
+        success: true,
+        type: 0,
+        data: JSON.stringify({ students, total }),
+      };
+
+      return res.status(200).json(apiResponse);
+    } catch (error) {
+      console.log(error);
+
+      const apiResponse: ExpectedApiResponse = {
+        success: false,
+        type: 1,
+        data: JSON.stringify(error),
+      };
+
+      return res.status(500).json(apiResponse);
+    }
+  },
+
   async createTickets(req: Request, res: Response) {
     try {
       const { tickets }: { tickets: CreateTicketsType } = req.body;
