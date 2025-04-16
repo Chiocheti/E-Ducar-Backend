@@ -26,6 +26,7 @@ const AuthStudentController = {
           {
             model: Registration,
             as: "registrations",
+            where: { stopped: false },
             include: [
               {
                 model: Course,
