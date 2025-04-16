@@ -9,6 +9,8 @@ import Course from "../models/Course";
 import Student from "../models/Student";
 import Registration from "../models/Registration";
 import { ExpectedApiResponse } from "../Types/ApiTypes";
+import Ticket from "../models/Ticket";
+import { Op } from "sequelize";
 
 const createStudentSchema = z.object({
   name: z.string(),
@@ -123,6 +125,83 @@ const StudentController = {
       };
 
       await Student.create(newStudent);
+
+      const apiResponse: ExpectedApiResponse = {
+        success: true,
+        type: 0,
+        data: "Estudante cadastrado com sucesso",
+      };
+
+      return res.status(200).json(apiResponse);
+    } catch (error) {
+      console.log(error);
+
+      const apiResponse: ExpectedApiResponse = {
+        success: false,
+        type: 1,
+        data: JSON.stringify(error),
+      };
+
+      return res.status(500).json(apiResponse);
+    }
+  },
+
+  async trashCreate(req: Request, res: Response) {
+    type CreateStudentType = {
+      name: string;
+      email: string;
+      phone: string;
+      password: string;
+      repeatPassword: string;
+      registrations: {
+        courseId: string;
+        ticketId: string | null;
+        registerDate: string;
+        conclusionDate: string;
+        supportDate: string;
+      }[];
+    };
+
+    const student: CreateStudentType = req.body.student;
+
+    try {
+      const findStudent = await Student.findOne({
+        where: { email: student.email },
+      });
+
+      if (findStudent) {
+        const apiResponse: ExpectedApiResponse = {
+          success: false,
+          type: 3,
+          data: "Este email ja está em uso",
+        };
+
+        return res.status(201).json(apiResponse);
+      }
+
+      const newStudent = {
+        ...student,
+        password: bcrypt.hashSync(student.password, 10),
+        image: null,
+      };
+
+      await Student.create(newStudent, {
+        include: [
+          {
+            model: Registration,
+            as: "registrations",
+          },
+        ],
+      });
+
+      const ticketIds = student.registrations.map(
+        (registration) => registration.ticketId
+      );
+
+      await Ticket.update(
+        { used: true },
+        { where: { id: { [Op.in]: ticketIds } } }
+      );
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
