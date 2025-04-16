@@ -5,14 +5,17 @@ import db from "./";
 
 import Student from "./Student";
 import Course from "./Course";
+import Ticket from "./Ticket";
 
 class Registration extends Model {
   declare id: string;
   declare studentId: string;
   declare courseId: string;
+  declare ticketId: string | null;
   declare registerDate: string;
   declare conclusionDate: string | null;
   declare supportDate: string | null;
+  declare stopped: boolean;
 }
 
 Registration.init(
@@ -44,6 +47,16 @@ Registration.init(
       onUpdate: "CASCADE",
       onDelete: "CASCADE",
     },
+    ticketId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "tickets",
+        key: "id",
+      },
+      onUpdate: "CASCADE",
+      onDelete: "CASCADE",
+    },
     registerDate: {
       type: DataTypes.DATEONLY,
       allowNull: false,
@@ -55,6 +68,11 @@ Registration.init(
     supportDate: {
       type: DataTypes.DATEONLY,
       allowNull: true,
+    },
+    stopped: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
   },
   {
@@ -90,18 +108,14 @@ Course.hasMany(Registration, {
   as: "registrations",
 });
 
-// Funciona
+Registration.belongsTo(Ticket, {
+  foreignKey: "ticketId",
+  as: "ticket",
+});
 
-// Student.belongsToMany(Course, {
-//   through: Registration,
-//   foreignKey: "studentId",
-//   as: "courses",
-// });
-
-// Course.belongsToMany(Student, {
-//   through: Registration,
-//   foreignKey: "courseId",
-//   as: "students",
-// });
+Ticket.hasOne(Registration, {
+  foreignKey: "ticketId",
+  as: "registration",
+});
 
 export default Registration;
