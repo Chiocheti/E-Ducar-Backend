@@ -45,10 +45,12 @@ const TicketController = {
   async search(req: Request, res: Response) {
     try {
       const {
+        studentName,
         collaboratorId,
         offset,
         pageRange,
       }: {
+        studentName: string | null;
         collaboratorId: string | null;
         offset: number;
         pageRange: number;
@@ -74,6 +76,7 @@ const TicketController = {
               ],
             },
           ],
+          where: studentName ? { name: { [Op.like]: `%${studentName}%` } } : {},
           offset,
           limit: pageRange || undefined,
           order: ["name"],
@@ -90,6 +93,59 @@ const TicketController = {
               where: { ticketId: { [Op.is]: null } },
             },
           ],
+          where: studentName ? { name: { [Op.like]: `%${studentName}%` } } : {},
+        });
+
+        const apiResponse: ExpectedApiResponse = {
+          success: true,
+          type: 0,
+          data: JSON.stringify({ students, total }),
+        };
+
+        return res.status(200).json(apiResponse);
+      }
+
+      if (collaboratorId === "off") {
+        const students = await Student.findAll({
+          include: [
+            {
+              model: Registration,
+              as: "registrations",
+              include: [
+                {
+                  model: Ticket,
+                  as: "ticket",
+                },
+                {
+                  model: Course,
+                  as: "course",
+                },
+              ],
+            },
+          ],
+          where: studentName ? { name: { [Op.like]: `%${studentName}%` } } : {},
+          offset,
+          limit: pageRange || 100000,
+          order: ["name"],
+        });
+
+        const total = await Student.count({
+          distinct: true,
+          col: "id",
+          include: [
+            {
+              model: Registration,
+              as: "registrations",
+              required: true,
+              include: [
+                {
+                  model: Ticket,
+                  as: "ticket",
+                },
+              ],
+            },
+          ],
+          where: studentName ? { name: { [Op.like]: `%${studentName}%` } } : {},
         });
 
         const apiResponse: ExpectedApiResponse = {
@@ -120,6 +176,7 @@ const TicketController = {
             ],
           },
         ],
+        where: studentName ? { name: { [Op.like]: `%${studentName}%` } } : {},
         offset,
         limit: pageRange || 100000,
         order: ["name"],
@@ -143,6 +200,7 @@ const TicketController = {
             ],
           },
         ],
+        where: studentName ? { name: { [Op.like]: `%${studentName}%` } } : {},
       });
 
       const apiResponse: ExpectedApiResponse = {
