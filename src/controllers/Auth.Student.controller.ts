@@ -1,13 +1,9 @@
 import { Response, Request } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import User from "../models/User";
-import Course from "../models/Course";
 import Student from "../models/Student";
-import Registration from "../models/Registration";
+
 import { ExpectedApiResponse } from "../Types/ApiTypes";
-import LessonProgress from "../models/LessonProgress";
-import Lesson from "../models/Lesson";
 
 const accessTokenDuration = "7d";
 const refreshTokenDuration = "30d";
@@ -22,37 +18,6 @@ const AuthStudentController = {
       }: { email: string; password: string; time: string } = req.body;
 
       const student = await Student.findOne({
-        include: [
-          {
-            model: Registration,
-            as: "registrations",
-            where: { stopped: false },
-            include: [
-              {
-                model: Course,
-                as: "course",
-                include: [
-                  {
-                    model: User,
-                    as: "user",
-                  },
-                ],
-              },
-              {
-                model: LessonProgress,
-                as: "lessonsProgress",
-                separate: true,
-                include: [
-                  {
-                    model: Lesson,
-                    as: "lesson",
-                  },
-                ],
-                order: [["lesson", "order"]],
-              },
-            ],
-          },
-        ],
         where: { email },
       });
 
@@ -60,7 +25,7 @@ const AuthStudentController = {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: "Email ou senha incorretos",
+          data: JSON.stringify("Email ou senha incorretos"),
         };
 
         return res.status(201).json(apiResponse);
@@ -72,7 +37,7 @@ const AuthStudentController = {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: "Email ou senha incorretos",
+          data: JSON.stringify("Email ou senha incorretos"),
         };
 
         return res.status(201).json(apiResponse);
@@ -98,7 +63,14 @@ const AuthStudentController = {
         success: true,
         type: 0,
         data: JSON.stringify({
-          student,
+          student: {
+            id: student.id,
+            email: student.email,
+            image: student.image,
+            lastLogin: student.lastLogin,
+            name: student.name,
+            phone: student.phone,
+          },
           tokens: {
             accessToken,
             refreshToken,
