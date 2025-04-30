@@ -11,6 +11,8 @@ import Registration from "../models/Registration";
 import { ExpectedApiResponse } from "../Types/ApiTypes";
 import Ticket from "../models/Ticket";
 import { Op } from "sequelize";
+import LessonProgress from "../models/LessonProgress";
+import Lesson from "../models/Lesson";
 
 const createStudentSchema = z.object({
   name: z.string(),
@@ -33,28 +35,50 @@ type UpdateStudentType = z.infer<typeof updateStudentSchema>;
 
 const StudentController = {
   async getById(req: Request, res: Response) {
-    const { id }: { id: string } = req.body;
+    const {
+      id,
+      registrations,
+      stopped,
+    }: { id: string; registrations: boolean; stopped: boolean | null } =
+      req.body;
 
     try {
       const student = await Student.findOne({
-        include: [
-          {
-            model: Registration,
-            as: "registrations",
-            include: [
+        attributes: { exclude: ["password", "refreshToken"] },
+        include: registrations
+          ? [
               {
-                model: Course,
-                as: "course",
+                model: Registration,
+                as: "registrations",
+                required: false,
+                where: stopped ? { stopped } : {},
                 include: [
                   {
-                    model: User,
-                    as: "user",
+                    model: Course,
+                    as: "course",
+                    include: [
+                      {
+                        model: User,
+                        as: "user",
+                      },
+                    ],
+                  },
+                  {
+                    model: LessonProgress,
+                    as: "lessonsProgress",
+                    separate: true,
+                    include: [
+                      {
+                        model: Lesson,
+                        as: "lesson",
+                      },
+                    ],
+                    order: [["lesson", "order"]],
                   },
                 ],
               },
-            ],
-          },
-        ],
+            ]
+          : [],
         where: { id },
       });
 
@@ -224,8 +248,13 @@ const StudentController = {
   },
 
   async update(req: Request, res: Response) {
-    const { id, student }: { id: string; student: UpdateStudentType } =
-      req.body;
+    const {
+      id,
+      student,
+    }: {
+      id: string;
+      student: UpdateStudentType;
+    } = req.body;
 
     try {
       const { success, error } = updateStudentSchema.safeParse(student);
