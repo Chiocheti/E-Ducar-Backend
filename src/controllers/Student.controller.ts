@@ -35,50 +35,42 @@ type UpdateStudentType = z.infer<typeof updateStudentSchema>;
 
 const StudentController = {
   async getById(req: Request, res: Response) {
-    const {
-      id,
-      registrations,
-      stopped,
-    }: { id: string; registrations: boolean; stopped: boolean | null } =
+    const { id, registrations }: { id: string; registrations: boolean } =
       req.body;
 
     try {
       const student = await Student.findOne({
         attributes: { exclude: ["password", "refreshToken"] },
-        include: registrations
-          ? [
+        include: [
+          {
+            model: Registration,
+            as: "registrations",
+            required: registrations,
+            include: [
               {
-                model: Registration,
-                as: "registrations",
-                required: false,
-                where: stopped ? { stopped } : {},
+                model: Course,
+                as: "course",
                 include: [
                   {
-                    model: Course,
-                    as: "course",
-                    include: [
-                      {
-                        model: User,
-                        as: "user",
-                      },
-                    ],
-                  },
-                  {
-                    model: LessonProgress,
-                    as: "lessonsProgress",
-                    separate: true,
-                    include: [
-                      {
-                        model: Lesson,
-                        as: "lesson",
-                      },
-                    ],
-                    order: [["lesson", "order"]],
+                    model: User,
+                    as: "user",
                   },
                 ],
               },
-            ]
-          : [],
+              {
+                model: LessonProgress,
+                as: "lessonsProgress",
+                include: [
+                  {
+                    model: Lesson,
+                    as: "lesson",
+                  },
+                ],
+                order: [["lesson", "order"]],
+              },
+            ],
+          },
+        ],
         where: { id },
       });
 
