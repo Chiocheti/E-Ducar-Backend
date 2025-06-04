@@ -6,12 +6,16 @@ import fs from "fs";
 import path from "path";
 import User from "../models/User";
 import { ExpectedApiResponse } from "../Types/ApiTypes";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  PutObjectCommand,
+  S3Client,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 
 const awsRegion = process.env.AWS_REGION || "";
 const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
 const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || "";
-const awsSaveUsersURL = process.env.S3_BUCKET_NAME_USERS || "";
+const awsUsersURL = process.env.S3_BUCKET_NAME_USERS || "";
 
 const s3client = new S3Client({
   region: awsRegion,
@@ -174,12 +178,12 @@ const UserController = {
 
       const uuid = uuidv4();
 
-      const link = `https://${awsSaveUsersURL}.s3.${awsRegion}.amazonaws.com/${uuid}`;
+      const link = `https://${awsUsersURL}.s3.${awsRegion}.amazonaws.com/${uuid}`;
 
       console.log(link);
 
       const params = {
-        Bucket: awsSaveUsersURL,
+        Bucket: awsUsersURL,
         Key: uuid,
         Body: fileContent,
         ContentType: req.file?.mimetype || "",
@@ -258,12 +262,12 @@ const UserController = {
   },
 
   async updateImage(req: Request, res: Response) {
-    const { file } = req;
+    const fileContent = req.file?.buffer;
     const { imageLink, userId }: { imageLink: string; userId: string } =
       req.body;
 
     try {
-      if (!file) {
+      if (!fileContent) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
@@ -272,25 +276,27 @@ const UserController = {
         return res.status(201).json(apiResponse);
       }
 
-      const filePath = path.join(__dirname, "..", "uploads", imageLink);
+      const deleteParams = {
+        Bucket: awsUsersURL,
+        Key: imageLink,
+      };
 
-      if (!fs.existsSync(filePath)) {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 3,
-          data: "Arquivo não encontrado",
-        };
-        return res.status(201).json(apiResponse);
-      }
+      await s3client.send(new DeleteObjectCommand(deleteParams));
 
-      fs.unlinkSync(filePath);
+      const uuid = uuidv4();
 
-      const uniqueName = `${uuidv4()}-${file.originalname}`;
-      const uploadPath = path.join(__dirname, "..", "uploads", uniqueName);
+      const link = `https://${awsUsersURL}.s3.${awsRegion}.amazonaws.com/${uuid}`;
 
-      fs.writeFileSync(uploadPath, file.buffer);
+      const params = {
+        Bucket: awsUsersURL,
+        Key: uuid,
+        Body: fileContent,
+        ContentType: req.file?.mimetype || "",
+      };
 
-      await User.update({ image: uniqueName }, { where: { id: userId } });
+      await s3client.send(new PutObjectCommand(params));
+
+      await User.update({ image: link }, { where: { id: userId } });
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
