@@ -15,7 +15,8 @@ class Registration extends Model {
   declare registerDate: string;
   declare conclusionDate: string | null;
   declare supportDate: string | null;
-  declare stopped: boolean;
+  declare examResult: number | null;
+  declare degreeLink: string | null;
 }
 
 Registration.init(
@@ -69,10 +70,13 @@ Registration.init(
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
-    stopped: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
+    examResult: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    degreeLink: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {

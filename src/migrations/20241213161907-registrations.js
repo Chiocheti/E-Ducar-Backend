@@ -53,10 +53,13 @@ module.exports = {
         type: Sequelize.DATEONLY,
         allowNull: true,
       },
-      stopped: {
-        type: Sequelize.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
+      exam_result: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+      },
+      degree_link: {
+        type: Sequelize.STRING,
+        allowNull: true,
       },
       created_at: {
         type: Sequelize.DATE,
