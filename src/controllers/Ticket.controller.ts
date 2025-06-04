@@ -76,9 +76,17 @@ const TicketController = {
               ],
             },
           ],
-          where: studentName ? { name: { [Op.like]: `%${studentName}%` } } : {},
+          where: studentName
+            ? {
+                [Op.or]: {
+                  name: { [Op.like]: `%${studentName}%` },
+                  email: { [Op.like]: `%${studentName}%` },
+                  phone: { [Op.like]: `%${studentName}%` },
+                },
+              }
+            : {},
           offset,
-          limit: pageRange || undefined,
+          limit: pageRange || 100000,
           order: ["name"],
         });
 
@@ -93,7 +101,15 @@ const TicketController = {
               where: { ticketId: { [Op.is]: null } },
             },
           ],
-          where: studentName ? { name: { [Op.like]: `%${studentName}%` } } : {},
+          where: studentName
+            ? {
+                [Op.or]: {
+                  name: { [Op.like]: `%${studentName}%` },
+                  email: { [Op.like]: `%${studentName}%` },
+                  phone: { [Op.like]: `%${studentName}%` },
+                },
+              }
+            : {},
         });
 
         const apiResponse: ExpectedApiResponse = {
@@ -123,7 +139,15 @@ const TicketController = {
               ],
             },
           ],
-          where: studentName ? { name: { [Op.like]: `%${studentName}%` } } : {},
+          where: studentName
+            ? {
+                [Op.or]: {
+                  name: { [Op.like]: `%${studentName}%` },
+                  email: { [Op.like]: `%${studentName}%` },
+                  phone: { [Op.like]: `%${studentName}%` },
+                },
+              }
+            : {},
           offset,
           limit: pageRange || 100000,
           order: ["name"],
@@ -145,7 +169,15 @@ const TicketController = {
               ],
             },
           ],
-          where: studentName ? { name: { [Op.like]: `%${studentName}%` } } : {},
+          where: studentName
+            ? {
+                [Op.or]: {
+                  name: { [Op.like]: `%${studentName}%` },
+                  email: { [Op.like]: `%${studentName}%` },
+                  phone: { [Op.like]: `%${studentName}%` },
+                },
+              }
+            : {},
         });
 
         const apiResponse: ExpectedApiResponse = {
@@ -176,7 +208,15 @@ const TicketController = {
             ],
           },
         ],
-        where: studentName ? { name: { [Op.like]: `%${studentName}%` } } : {},
+        where: studentName
+          ? {
+              [Op.or]: {
+                name: { [Op.like]: `%${studentName}%` },
+                email: { [Op.like]: `%${studentName}%` },
+                phone: { [Op.like]: `%${studentName}%` },
+              },
+            }
+          : {},
         offset,
         limit: pageRange || 100000,
         order: ["name"],
@@ -200,7 +240,15 @@ const TicketController = {
             ],
           },
         ],
-        where: studentName ? { name: { [Op.like]: `%${studentName}%` } } : {},
+        where: studentName
+          ? {
+              [Op.or]: {
+                name: { [Op.like]: `%${studentName}%` },
+                email: { [Op.like]: `%${studentName}%` },
+                phone: { [Op.like]: `%${studentName}%` },
+              },
+            }
+          : {},
       });
 
       const apiResponse: ExpectedApiResponse = {

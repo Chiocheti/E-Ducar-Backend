@@ -28,26 +28,23 @@ const createCourseSchema = z.object({
       videoLink: z.string(),
     })
   ),
-  exams: z.array(
-    z.object({
-      title: z.string(),
-      description: z.string(),
-      order: z.number(),
-      questions: z.array(
-        z.object({
-          question: z.string(),
-          order: z.number(),
-          questionOptions: z.array(
-            z.object({
-              answer: z.string(),
-              isAnswer: z.boolean(),
-              order: z.number(),
-            })
-          ),
-        })
-      ),
-    })
-  ),
+  exam: z.object({
+    title: z.string(),
+    description: z.string(),
+    questions: z.array(
+      z.object({
+        question: z.string(),
+        order: z.number(),
+        questionOptions: z.array(
+          z.object({
+            answer: z.string(),
+            isAnswer: z.boolean(),
+            order: z.number(),
+          })
+        ),
+      })
+    ),
+  }),
 });
 
 type CreateCourseType = z.infer<typeof createCourseSchema>;
@@ -75,33 +72,30 @@ const updateCourseSchema = z.object({
       })
     )
     .optional(),
-  exams: z
-    .array(
-      z.object({
-        id: z.string().optional(),
-        courseId: z.string().optional(),
-        title: z.string(),
-        description: z.string(),
-        order: z.number(),
-        questions: z.array(
-          z.object({
-            id: z.string().optional(),
-            examId: z.string().optional(),
-            question: z.string(),
-            order: z.number(),
-            questionOptions: z.array(
-              z.object({
-                id: z.string().optional(),
-                questionId: z.string().optional(),
-                answer: z.string(),
-                isAnswer: z.boolean(),
-                order: z.number(),
-              })
-            ),
-          })
-        ),
-      })
-    )
+  exam: z
+    .object({
+      id: z.string().optional(),
+      courseId: z.string().optional(),
+      title: z.string(),
+      description: z.string(),
+      questions: z.array(
+        z.object({
+          id: z.string().optional(),
+          examId: z.string().optional(),
+          question: z.string(),
+          order: z.number(),
+          questionOptions: z.array(
+            z.object({
+              id: z.string().optional(),
+              questionId: z.string().optional(),
+              answer: z.string(),
+              isAnswer: z.boolean(),
+              order: z.number(),
+            })
+          ),
+        })
+      ),
+    })
     .optional(),
 });
 
@@ -119,25 +113,20 @@ const CourseController = {
           {
             model: Lesson,
             as: "lessons",
-            separate: true,
             order: [["order", "ASC"]],
           },
           {
             model: Exam,
-            as: "exams",
-            separate: true,
-            order: [["order", "ASC"]],
+            as: "exam",
             include: [
               {
                 model: Question,
                 as: "questions",
-                separate: true,
                 order: [["order", "ASC"]],
                 include: [
                   {
                     model: QuestionOption,
                     as: "questionOptions",
-                    separate: true,
                     order: [["order", "ASC"]],
                   },
                 ],
@@ -179,25 +168,20 @@ const CourseController = {
           {
             model: Lesson,
             as: "lessons",
-            separate: true,
             order: [["order", "ASC"]],
           },
           {
             model: Exam,
-            as: "exams",
-            separate: true,
-            order: [["order", "ASC"]],
+            as: "exam",
             include: [
               {
                 model: Question,
                 as: "questions",
-                separate: true,
                 order: [["order", "ASC"]],
                 include: [
                   {
                     model: QuestionOption,
                     as: "questionOptions",
-                    separate: true,
                     order: [["order", "ASC"]],
                   },
                 ],
@@ -242,25 +226,20 @@ const CourseController = {
           {
             model: Lesson,
             as: "lessons",
-            separate: true,
             order: [["order", "ASC"]],
           },
           {
             model: Exam,
-            as: "exams",
-            separate: true,
-            order: [["order", "ASC"]],
+            as: "exam",
             include: [
               {
                 model: Question,
                 as: "questions",
-                separate: true,
                 order: [["order", "ASC"]],
                 include: [
                   {
                     model: QuestionOption,
                     as: "questionOptions",
-                    separate: true,
                     order: [["order", "ASC"]],
                   },
                 ],
@@ -295,28 +274,14 @@ const CourseController = {
       const { courseName }: { courseName: string } = req.body;
 
       const course = await Course.findOne({
-        attributes: [
-          "id",
-          "name",
-          "description",
-          "required",
-          "duration",
-          "support",
-          "image",
-          "price",
-          "text",
-        ],
         include: [
           {
             model: User,
             as: "user",
-            attributes: ["name"],
           },
           {
             model: Lesson,
             as: "lessons",
-            separate: true,
-            attributes: ["id", "title", "order"],
             order: [["order", "ASC"]],
           },
         ],
@@ -386,7 +351,7 @@ const CourseController = {
             },
             {
               model: Exam,
-              as: "exams",
+              as: "exam",
               include: [
                 {
                   model: Question,
@@ -441,7 +406,7 @@ const CourseController = {
         return res.status(201).json(apiResponse);
       }
 
-      const { lessons, exams, ...courseRest } = course;
+      const { lessons, exam, ...courseRest } = course;
 
       await Course.update(courseRest, { where: { id: course.id } });
 
@@ -451,7 +416,7 @@ const CourseController = {
         });
 
         findLessons.forEach(async (element) => {
-          if (!lessons.find((item) => element.id === item.id)) {
+          if (!lessons.some((item) => element.id === item.id)) {
             await element.destroy();
           }
         });
@@ -465,88 +430,54 @@ const CourseController = {
         });
       }
 
-      if (exams) {
-        const findExams = await Exam.findAll({
-          where: { courseId: course.id },
+      if (exam) {
+        await Exam.update(exam, { where: { id: exam.id } });
+
+        const findQuestions = await Question.findAll({
+          where: { examId: exam.id },
         });
 
-        findExams.forEach(async (element) => {
-          if (!exams.find((item) => element.id === item.id)) {
+        findQuestions.forEach(async (element) => {
+          if (!exam.questions.some((item) => element.id === item.id))
             await element.destroy();
-          }
         });
 
-        exams.forEach(async (exam) => {
-          if (!exam.id) {
-            await Exam.create(
-              { ...exam, courseId: course.id },
+        exam.questions.forEach(async (question) => {
+          if (!question.id) {
+            await Question.create(
+              { ...question, examId: exam.id },
               {
                 include: [
                   {
-                    model: Question,
-                    as: "questions",
-                    include: [
-                      {
-                        model: QuestionOption,
-                        as: "questionOptions",
-                      },
-                    ],
+                    model: QuestionOption,
+                    as: "questionOptions",
                   },
                 ],
               }
             );
           } else {
-            await Exam.update(exam, { where: { id: exam.id } });
+            await Question.update(question, { where: { id: question.id } });
 
-            const findQuestions = await Question.findAll({
-              where: { examId: exam.id },
+            const findQuestionOptions = await QuestionOption.findAll({
+              where: { questionId: question.id },
             });
 
-            findQuestions.forEach(async (element) => {
-              if (!exam.questions.find((item) => element.id === item.id))
+            findQuestionOptions.forEach(async (element) => {
+              if (
+                !question.questionOptions.find((item) => element.id === item.id)
+              )
                 await element.destroy();
             });
 
-            exam.questions.forEach(async (question) => {
-              if (!question.id) {
-                await Question.create(
-                  { ...question, examId: exam.id },
-                  {
-                    include: [
-                      {
-                        model: QuestionOption,
-                        as: "questionOptions",
-                      },
-                    ],
-                  }
-                );
+            question.questionOptions.forEach(async (questionOption) => {
+              if (!questionOption.id) {
+                await QuestionOption.create({
+                  ...questionOption,
+                  questionId: question.id,
+                });
               } else {
-                await Question.update(question, { where: { id: question.id } });
-
-                const findQuestionOptions = await QuestionOption.findAll({
-                  where: { questionId: question.id },
-                });
-
-                findQuestionOptions.forEach(async (element) => {
-                  if (
-                    !question.questionOptions.find(
-                      (item) => element.id === item.id
-                    )
-                  )
-                    await element.destroy();
-                });
-
-                question.questionOptions.forEach(async (questionOption) => {
-                  if (!questionOption.id) {
-                    await QuestionOption.create({
-                      ...questionOption,
-                      questionId: question.id,
-                    });
-                  } else {
-                    await QuestionOption.update(questionOption, {
-                      where: { id: questionOption.id },
-                    });
-                  }
+                await QuestionOption.update(questionOption, {
+                  where: { id: questionOption.id },
                 });
               }
             });

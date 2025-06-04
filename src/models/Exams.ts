@@ -9,7 +9,6 @@ class Exam extends Model {
   declare courseId: string;
   declare title: string;
   declare description: string;
-  declare order: number;
 }
 
 Exam.init(
@@ -39,10 +38,6 @@ Exam.init(
       type: DataTypes.TEXT,
       allowNull: false,
     },
-    order: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
   },
   {
     sequelize: db,
@@ -62,9 +57,9 @@ Exam.belongsTo(Course, {
   as: "course",
 });
 
-Course.hasMany(Exam, {
+Course.hasOne(Exam, {
   foreignKey: "courseId",
-  as: "exams",
+  as: "exam",
 });
 
 export default Exam;

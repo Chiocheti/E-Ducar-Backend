@@ -20,27 +20,19 @@ registrationRoutes.post(
   }
 );
 
-registrationRoutes.put(
-  "/update",
-  authenticate,
-  async (req: Request, res: Response) => {
-    await RegistrationController.update(req, res);
-  }
-);
-
-registrationRoutes.post(
-  "/createStudentAnswer",
-  authenticate,
-  async (req: Request, res: Response) => {
-    await RegistrationController.createStudentAnswer(req, res);
-  }
-);
-
 registrationRoutes.post(
   "/updateLessonProgress",
   authenticate,
   async (req: Request, res: Response) => {
     await RegistrationController.updateLessonProgress(req, res);
+  }
+);
+
+registrationRoutes.post(
+  "/finishCourse",
+  authenticate,
+  async (req: Request, res: Response) => {
+    await RegistrationController.finishCourse(req, res);
   }
 );
 

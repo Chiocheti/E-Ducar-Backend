@@ -6,6 +6,20 @@ import fs from "fs";
 import path from "path";
 import User from "../models/User";
 import { ExpectedApiResponse } from "../Types/ApiTypes";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+
+const awsRegion = process.env.AWS_REGION || "";
+const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
+const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || "";
+const awsSaveUsersURL = process.env.S3_BUCKET_NAME_USERS || "";
+
+const s3client = new S3Client({
+  region: awsRegion,
+  credentials: {
+    accessKeyId: awsAccessKeyId,
+    secretAccessKey: awsSecretAccessKey,
+  },
+});
 
 const createUserSchema = z.object({
   name: z.string(),
@@ -117,11 +131,12 @@ const UserController = {
   },
 
   async create(req: Request, res: Response) {
-    const { file } = req;
+    const fileContent = req.file?.buffer;
+
     const user: CreateUserType = JSON.parse(req.body.user);
 
     try {
-      if (!file) {
+      if (!fileContent) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
@@ -157,15 +172,25 @@ const UserController = {
         return res.status(201).json(apiResponse);
       }
 
-      const uniqueName = `${uuidv4()}-${file.originalname}`;
-      const uploadPath = path.join(__dirname, "..", "uploads", uniqueName);
+      const uuid = uuidv4();
 
-      fs.writeFileSync(uploadPath, file.buffer);
+      const link = `https://${awsSaveUsersURL}.s3.${awsRegion}.amazonaws.com/${uuid}`;
+
+      console.log(link);
+
+      const params = {
+        Bucket: awsSaveUsersURL,
+        Key: uuid,
+        Body: fileContent,
+        ContentType: req.file?.mimetype || "",
+      };
+
+      await s3client.send(new PutObjectCommand(params));
 
       const newUser = {
         ...user,
         password: bcrypt.hashSync(user.password, 10),
-        image: uniqueName,
+        image: link,
       };
 
       await User.create(newUser);
