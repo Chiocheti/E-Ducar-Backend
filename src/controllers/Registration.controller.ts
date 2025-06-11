@@ -443,6 +443,17 @@ const RegistrationController = {
 
       await s3client.send(new PutObjectCommand(params));
 
+      const link = `https://${awsSaveDegreeURL}.s3.${awsRegion}.amazonaws.com/${randomCode}`;
+
+      await Registration.update(
+        {
+          degreeLink: link,
+          conclusionDate: registerData.conclusionDate,
+          examResult: registerData.examResult,
+        },
+        { where: { id: registerData.id } }
+      );
+
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
