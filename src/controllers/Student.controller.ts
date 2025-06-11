@@ -10,9 +10,28 @@ import Student from "../models/Student";
 import Registration from "../models/Registration";
 import { ExpectedApiResponse } from "../Types/ApiTypes";
 import Ticket from "../models/Ticket";
-import { Op } from "sequelize";
+import { Includeable, Op } from "sequelize";
 import LessonProgress from "../models/LessonProgress";
 import Lesson from "../models/Lesson";
+
+import {
+  PutObjectCommand,
+  S3Client,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
+
+const awsRegion = process.env.AWS_REGION || "";
+const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
+const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || "";
+const awsStudentsUrl = process.env.S3_BUCKET_NAME_STUDENTS || "";
+
+const s3client = new S3Client({
+  region: awsRegion,
+  credentials: {
+    accessKeyId: awsAccessKeyId,
+    secretAccessKey: awsSecretAccessKey,
+  },
+});
 
 const createStudentSchema = z.object({
   name: z.string(),
@@ -38,39 +57,43 @@ const StudentController = {
     const { id, registrations }: { id: string; registrations: boolean } =
       req.body;
 
-    try {
-      const student = await Student.findOne({
-        attributes: { exclude: ["password", "refreshToken"] },
+    const include: Includeable[] = [];
+
+    if (registrations) {
+      include.push({
+        model: Registration,
+        as: "registrations",
+        required: false,
         include: [
           {
-            model: Registration,
-            as: "registrations",
-            required: registrations,
+            model: Course,
+            as: "course",
             include: [
               {
-                model: Course,
-                as: "course",
-                include: [
-                  {
-                    model: User,
-                    as: "user",
-                  },
-                ],
-              },
-              {
-                model: LessonProgress,
-                as: "lessonsProgress",
-                include: [
-                  {
-                    model: Lesson,
-                    as: "lesson",
-                  },
-                ],
-                order: [["lesson", "order"]],
+                model: User,
+                as: "user",
               },
             ],
           },
+          {
+            model: LessonProgress,
+            as: "lessonsProgress",
+            include: [
+              {
+                model: Lesson,
+                as: "lesson",
+              },
+            ],
+            order: [["lesson", "order"]],
+          },
         ],
+      });
+    }
+
+    try {
+      const student = await Student.findOne({
+        attributes: { exclude: ["password", "refreshToken"] },
+        include,
         where: { id },
       });
 
@@ -288,12 +311,12 @@ const StudentController = {
   },
 
   async updateImage(req: Request, res: Response) {
-    const { file } = req;
+    const fileContent = req.file?.buffer;
     const { imageLink, studentId }: { imageLink: string; studentId: string } =
       req.body;
 
     try {
-      if (!file) {
+      if (!fileContent) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
@@ -303,27 +326,28 @@ const StudentController = {
       }
 
       if (imageLink) {
-        const filePath = path.join(__dirname, "..", "uploads", imageLink);
+        const deleteParams = {
+          Bucket: awsStudentsUrl,
+          Key: imageLink,
+        };
 
-        if (!fs.existsSync(filePath)) {
-          const apiResponse: ExpectedApiResponse = {
-            success: false,
-            type: 3,
-            data: "Arquivo não encontrado",
-          };
-
-          return res.status(201).json(apiResponse);
-        }
-
-        fs.unlinkSync(filePath);
+        await s3client.send(new DeleteObjectCommand(deleteParams));
       }
 
-      const uniqueName = `${uuidv4()}-${file.originalname}`;
-      const uploadPath = path.join(__dirname, "..", "uploads", uniqueName);
+      const uuid = uuidv4();
 
-      fs.writeFileSync(uploadPath, file.buffer);
+      const link = `https://${awsStudentsUrl}.s3.${awsRegion}.amazonaws.com/${uuid}`;
 
-      await Student.update({ image: uniqueName }, { where: { id: studentId } });
+      const params = {
+        Bucket: awsStudentsUrl,
+        Key: uuid,
+        Body: fileContent,
+        ContentType: req.file?.mimetype || "",
+      };
+
+      await s3client.send(new PutObjectCommand(params));
+
+      await Student.update({ image: link }, { where: { id: studentId } });
 
       const apiResponse: ExpectedApiResponse = {
         success: true,

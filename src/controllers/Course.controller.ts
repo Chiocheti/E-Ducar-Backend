@@ -1,15 +1,34 @@
 import { Response, Request } from "express";
 import z from "zod";
-import { ExpectedApiResponse } from "../Types/ApiTypes";
 import { v4 as uuidv4 } from "uuid";
-import fs from "fs";
-import path from "path";
+
+import { ExpectedApiResponse } from "../Types/ApiTypes";
+
 import User from "../models/User";
 import Exam from "../models/Exams";
 import Lesson from "../models/Lesson";
 import Course from "../models/Course";
 import Question from "../models/Question";
 import QuestionOption from "../models/QuestionOption";
+
+import {
+  PutObjectCommand,
+  S3Client,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
+
+const awsRegion = process.env.AWS_REGION || "";
+const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
+const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || "";
+const awsCoursesURL = process.env.S3_BUCKET_NAME_COURSES || "";
+
+const s3client = new S3Client({
+  region: awsRegion,
+  credentials: {
+    accessKeyId: awsAccessKeyId,
+    secretAccessKey: awsSecretAccessKey,
+  },
+});
 
 const createCourseSchema = z.object({
   description: z.string(),
@@ -113,6 +132,7 @@ const CourseController = {
           {
             model: Lesson,
             as: "lessons",
+            separate: true,
             order: [["order", "ASC"]],
           },
           {
@@ -122,11 +142,13 @@ const CourseController = {
               {
                 model: Question,
                 as: "questions",
+                separate: true,
                 order: [["order", "ASC"]],
                 include: [
                   {
                     model: QuestionOption,
                     as: "questionOptions",
+                    separate: true,
                     order: [["order", "ASC"]],
                   },
                 ],
@@ -309,11 +331,11 @@ const CourseController = {
   },
 
   async create(req: Request, res: Response) {
-    const { file } = req;
+    const fileContent = req.file?.buffer;
     const course: CreateCourseType = JSON.parse(req.body.course);
 
     try {
-      if (!file) {
+      if (!fileContent) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
@@ -334,15 +356,21 @@ const CourseController = {
         return res.status(201).json(apiResponse);
       }
 
-      const uniqueName = `${uuidv4()}-${file.originalname}`;
-      const uploadPath = path.join(__dirname, "..", "uploads", uniqueName);
+      const uuid = uuidv4();
 
-      fs.writeFileSync(uploadPath, file.buffer);
+      const link = `https://${awsCoursesURL}.s3.${awsRegion}.amazonaws.com/${uuid}`;
 
-      const newCourse = { ...course, image: uniqueName };
+      const params = {
+        Bucket: awsCoursesURL,
+        Key: uuid,
+        Body: fileContent,
+        ContentType: req.file?.mimetype || "",
+      };
+
+      await s3client.send(new PutObjectCommand(params));
 
       await Course.create(
-        { ...newCourse, isVisible: false },
+        { ...course, isVisible: false, image: link },
         {
           include: [
             {
@@ -415,34 +443,37 @@ const CourseController = {
           where: { courseId: course.id },
         });
 
-        findLessons.forEach(async (element) => {
-          if (!lessons.some((item) => element.id === item.id)) {
-            await element.destroy();
+        for (const lesson of findLessons) {
+          if (!lessons.some((item) => lesson.id === item.id)) {
+            await lesson.destroy();
           }
-        });
+        }
 
-        lessons.forEach(async (element) => {
-          if (element.id) {
-            await Lesson.update(element, { where: { id: element.id } });
+        for (const lesson of lessons) {
+          if (lesson.id) {
+            await Lesson.update(lesson, { where: { id: lesson.id } });
           } else {
-            await Lesson.create({ ...element, courseId: course.id });
+            await Lesson.create({ ...lesson, courseId: course.id });
           }
-        });
+        }
       }
 
       if (exam) {
+        const { questions } = exam;
+
         await Exam.update(exam, { where: { id: exam.id } });
 
         const findQuestions = await Question.findAll({
           where: { examId: exam.id },
         });
 
-        findQuestions.forEach(async (element) => {
-          if (!exam.questions.some((item) => element.id === item.id))
-            await element.destroy();
-        });
+        for (const question of findQuestions) {
+          if (!questions.some((item) => question.id === item.id)) {
+            await question.destroy();
+          }
+        }
 
-        exam.questions.forEach(async (question) => {
+        for (const question of questions) {
           if (!question.id) {
             await Question.create(
               { ...question, examId: exam.id },
@@ -462,14 +493,17 @@ const CourseController = {
               where: { questionId: question.id },
             });
 
-            findQuestionOptions.forEach(async (element) => {
+            for (const questionOption of findQuestionOptions) {
               if (
-                !question.questionOptions.find((item) => element.id === item.id)
-              )
-                await element.destroy();
-            });
+                !question.questionOptions.some(
+                  (item) => questionOption.id === item.id
+                )
+              ) {
+                await questionOption.destroy();
+              }
+            }
 
-            question.questionOptions.forEach(async (questionOption) => {
+            for (const questionOption of question.questionOptions) {
               if (!questionOption.id) {
                 await QuestionOption.create({
                   ...questionOption,
@@ -480,10 +514,12 @@ const CourseController = {
                   where: { id: questionOption.id },
                 });
               }
-            });
+            }
           }
-        });
+        }
       }
+
+      console.log("Acabou");
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
@@ -506,11 +542,11 @@ const CourseController = {
   },
 
   async updateImage(req: Request, res: Response) {
-    const { file } = req;
+    const fileContent = req.file?.buffer;
     const { imageLink, id }: { imageLink: string; id: string } = req.body;
 
     try {
-      if (!file) {
+      if (!fileContent) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
@@ -519,31 +555,32 @@ const CourseController = {
         return res.status(201).json(apiResponse);
       }
 
-      const filePath = path.join(__dirname, "..", "uploads", imageLink);
+      const deleteParams = {
+        Bucket: awsCoursesURL,
+        Key: imageLink,
+      };
 
-      if (!fs.existsSync(filePath)) {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 3,
-          data: "Arquivo não encontrado",
-        };
+      await s3client.send(new DeleteObjectCommand(deleteParams));
 
-        return res.status(201).json(apiResponse);
-      }
+      const uuid = uuidv4();
 
-      fs.unlinkSync(filePath);
+      const link = `https://${awsCoursesURL}.s3.${awsRegion}.amazonaws.com/${uuid}`;
 
-      const uniqueName = `${uuidv4()}-${file.originalname}`;
-      const uploadPath = path.join(__dirname, "..", "uploads", uniqueName);
+      const params = {
+        Bucket: awsCoursesURL,
+        Key: uuid,
+        Body: fileContent,
+        ContentType: req.file?.mimetype || "",
+      };
 
-      fs.writeFileSync(uploadPath, file.buffer);
+      await s3client.send(new PutObjectCommand(params));
 
-      await Course.update({ image: uniqueName }, { where: { id } });
+      await Course.update({ image: link }, { where: { id } });
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: uniqueName,
+        data: "Alteração feita com sucesso",
       };
 
       return res.status(200).json(apiResponse);
