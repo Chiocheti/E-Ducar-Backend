@@ -2,10 +2,11 @@ import { Response, Request } from "express";
 import { v4 as uuidv4 } from "uuid";
 import z from "zod";
 import bcrypt from "bcrypt";
-import fs from "fs";
-import path from "path";
-import User from "../models/User";
+
 import { ExpectedApiResponse } from "../Types/ApiTypes";
+
+import User from "../models/User";
+
 import {
   PutObjectCommand,
   S3Client,
@@ -136,7 +137,6 @@ const UserController = {
 
   async create(req: Request, res: Response) {
     const fileContent = req.file?.buffer;
-
     const user: CreateUserType = JSON.parse(req.body.user);
 
     try {
@@ -179,8 +179,6 @@ const UserController = {
       const uuid = uuidv4();
 
       const link = `https://${awsUsersURL}.s3.${awsRegion}.amazonaws.com/${uuid}`;
-
-      console.log(link);
 
       const params = {
         Bucket: awsUsersURL,
