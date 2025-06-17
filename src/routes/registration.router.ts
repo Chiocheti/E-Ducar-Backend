@@ -20,7 +20,7 @@ registrationRoutes.post(
   }
 );
 
-registrationRoutes.post(
+registrationRoutes.put(
   "/updateLessonProgress",
   authenticate,
   async (req: Request, res: Response) => {
@@ -28,11 +28,19 @@ registrationRoutes.post(
   }
 );
 
-registrationRoutes.post(
+registrationRoutes.put(
   "/finishCourse",
   authenticate,
   async (req: Request, res: Response) => {
     await RegistrationController.finishCourse(req, res);
+  }
+);
+
+registrationRoutes.delete(
+  "/delete",
+  authenticate,
+  async (req: Request, res: Response) => {
+    await RegistrationController.delete(req, res);
   }
 );
 

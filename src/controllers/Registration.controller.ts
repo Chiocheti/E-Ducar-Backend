@@ -473,6 +473,42 @@ const RegistrationController = {
       return res.status(500).json(apiResponse);
     }
   },
+
+  async delete(req: Request, res: Response) {
+    const { id } = req.query;
+
+    try {
+      if (!id || typeof id !== "string") {
+        const apiResponse: ExpectedApiResponse = {
+          success: false,
+          type: 2,
+          data: JSON.stringify("Id não informado"),
+        };
+
+        return res.status(201).json(apiResponse);
+      }
+
+      await Registration.destroy({ where: { id } });
+
+      const apiResponse: ExpectedApiResponse = {
+        success: true,
+        type: 0,
+        data: "Matricula excluída com sucesso",
+      };
+
+      return res.status(200).json(apiResponse);
+    } catch (error) {
+      console.log(error);
+
+      const apiResponse: ExpectedApiResponse = {
+        success: false,
+        type: 1,
+        data: JSON.stringify(error),
+      };
+
+      return res.status(500).json(apiResponse);
+    }
+  },
 };
 
 export default RegistrationController;
