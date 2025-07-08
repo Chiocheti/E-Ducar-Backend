@@ -2,7 +2,7 @@ import { DataTypes, Model } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 
 import db from "./";
-import Exam from "./Exams";
+import Exam from "./Exam";
 
 class Question extends Model {
   declare id: string;
