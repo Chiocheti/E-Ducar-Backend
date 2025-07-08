@@ -1,26 +1,23 @@
 const fs = require("fs");
 
-import Registration from "../models/Registration";
-import z from "zod";
-import { ExpectedApiResponse } from "../Types/ApiTypes";
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument, rgb } from "pdf-lib";
 import { Response, Request } from "express";
+import { Includeable, IncludeOptions } from "sequelize";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import z from "zod";
 import fontkit from "fontkit";
 
 import Course from "../models/Course";
+import Exam from "../models/Exam";
 import Lesson from "../models/Lesson";
-import Exam from "../models/Exams";
+import LessonProgress from "../models/LessonProgress";
 import Question from "../models/Question";
 import QuestionOption from "../models/QuestionOption";
-import LessonProgress from "../models/LessonProgress";
+import Registration from "../models/Registration";
 import Ticket from "../models/Ticket";
 
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-} from "@aws-sdk/client-s3";
-import { Includeable, IncludeOptions } from "sequelize";
+import { ExpectedApiResponse } from "../Types/ApiTypes";
+
 import SplitString from "../utils/SplitString";
 import GenerateRandomString from "../utils/GenerateRandomString";
 
@@ -68,6 +65,7 @@ const updateRegistrationSchema = z.object({
     studentName: z.string(),
     courseName: z.string(),
     duration: z.string(),
+    conclusionDateToPrint: z.string(),
   }),
 });
 
@@ -342,10 +340,7 @@ const RegistrationController = {
         return res.status(201).json(apiResponse);
       }
 
-      const {
-        registerData,
-        degreeData: { studentName, courseName, duration },
-      } = finishData;
+      const { registerData, degreeData } = finishData;
 
       const arrayBuffer = await pdfResponse.arrayBuffer();
       const existingPdfBytes = new Uint8Array(arrayBuffer);
@@ -360,7 +355,7 @@ const RegistrationController = {
 
       const page = pdfDoc.getPages()[0];
 
-      const [line1, line2] = SplitString(studentName);
+      const [line1, line2] = SplitString(degreeData.studentName);
 
       const nameLine1Height = ubuntuBoltFont.heightAtSize(40);
       const nameLine1Width = ubuntuBoltFont.widthOfTextAtSize(line1, 40);
@@ -385,8 +380,11 @@ const RegistrationController = {
         });
       }
 
-      const courseWidth = ubuntuItalicFont.widthOfTextAtSize(courseName, 26);
-      page.drawText(courseName, {
+      const courseWidth = ubuntuItalicFont.widthOfTextAtSize(
+        degreeData.courseName,
+        26
+      );
+      page.drawText(degreeData.courseName, {
         x: 610 - courseWidth,
         y: 295,
         size: 26,
@@ -394,7 +392,7 @@ const RegistrationController = {
         color: rgb(0, 0, 0),
       });
 
-      const durationText = `Compreendido em ${duration}`;
+      const durationText = `Compreendido em ${degreeData.duration}`;
       const durationWidth = ubuntuItalicFont.widthOfTextAtSize(
         durationText,
         26
@@ -408,10 +406,10 @@ const RegistrationController = {
       });
 
       const conclusionDateWidth = ubuntuItalicFont.widthOfTextAtSize(
-        registerData.conclusionDate,
+        degreeData.conclusionDateToPrint,
         26
       );
-      page.drawText(registerData.conclusionDate, {
+      page.drawText(degreeData.conclusionDateToPrint, {
         x: 610 - conclusionDateWidth,
         y: 238,
         size: 26,
