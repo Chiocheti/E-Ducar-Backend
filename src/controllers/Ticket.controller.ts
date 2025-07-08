@@ -1,12 +1,13 @@
+import { Op } from "sequelize";
 import { Response, Request } from "express";
 import z from "zod";
-import { ExpectedApiResponse } from "../Types/ApiTypes";
-import Ticket from "../models/Ticket";
-import Registration from "../models/Registration";
-import Student from "../models/Student";
+
 import Course from "../models/Course";
-import { Op } from "sequelize";
-import Collaborator from "../models/Collaborator";
+import Ticket from "../models/Ticket";
+import Student from "../models/Student";
+import Registration from "../models/Registration";
+
+import { ExpectedApiResponse } from "../Types/ApiTypes";
 
 const createTicketsSchema = z.array(
   z.object({

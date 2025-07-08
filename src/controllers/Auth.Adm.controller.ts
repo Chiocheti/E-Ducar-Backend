@@ -1,7 +1,9 @@
-import User from "../models/User";
 import { Response, Request } from "express";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+
+import User from "../models/User";
+
 import { ExpectedApiResponse } from "../Types/ApiTypes";
 
 const accessTokenDuration = "7d";

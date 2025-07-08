@@ -1,21 +1,20 @@
-import { Response, Request } from "express";
-import z from "zod";
 import { v4 as uuidv4 } from "uuid";
-
-import { ExpectedApiResponse } from "../Types/ApiTypes";
-
-import User from "../models/User";
-import Exam from "../models/Exams";
-import Lesson from "../models/Lesson";
-import Course from "../models/Course";
-import Question from "../models/Question";
-import QuestionOption from "../models/QuestionOption";
-
+import { Response, Request } from "express";
 import {
   PutObjectCommand,
   S3Client,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+import z from "zod";
+
+import User from "../models/User";
+import Exam from "../models/Exam";
+import Lesson from "../models/Lesson";
+import Course from "../models/Course";
+import Question from "../models/Question";
+import QuestionOption from "../models/QuestionOption";
+
+import { ExpectedApiResponse } from "../Types/ApiTypes";
 
 const awsRegion = process.env.AWS_REGION || "";
 const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
@@ -304,10 +303,10 @@ const CourseController = {
           {
             model: Lesson,
             as: "lessons",
-            order: [["order", "ASC"]],
           },
         ],
         where: { name: courseName },
+        order: [["lessons", "order", "ASC"]],
       });
 
       const apiResponse: ExpectedApiResponse = {
