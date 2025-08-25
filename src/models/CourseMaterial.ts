@@ -2,16 +2,18 @@ import { DataTypes, Model } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 
 import db from "./";
-import Exam from "./Exam";
+import Course from "./Course";
 
-class Question extends Model {
+class CourseMaterial extends Model {
   declare id: string;
-  declare examId: string;
-  declare question: string;
+  declare courseId: string;
+  declare name: string;
+  declare docType: string;
+  declare link: string;
   declare order: number;
 }
 
-Question.init(
+CourseMaterial.init(
   {
     id: {
       type: DataTypes.UUID,
@@ -20,28 +22,36 @@ Question.init(
       allowNull: false,
       defaultValue: DataTypes.UUIDV4,
     },
-    examId: {
+    courseId: {
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: "exams",
+        model: "courses",
         key: "id",
       },
       onUpdate: "CASCADE",
       onDelete: "CASCADE",
     },
-    question: {
-      type: DataTypes.TEXT,
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    docType: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    link: {
+      type: DataTypes.STRING,
       allowNull: false,
     },
     order: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.NUMBER,
       allowNull: false,
     },
   },
   {
     sequelize: db,
-    tableName: "questions",
+    tableName: "course_materials",
     timestamps: false,
     underscored: true,
     hooks: {
@@ -52,14 +62,14 @@ Question.init(
   }
 );
 
-Question.belongsTo(Exam, {
-  foreignKey: "examId",
-  as: "exam",
+CourseMaterial.belongsTo(Course, {
+  foreignKey: "courseId",
+  as: "course",
 });
 
-Exam.hasMany(Question, {
-  foreignKey: "examId",
-  as: "questions",
+Course.hasMany(CourseMaterial, {
+  foreignKey: "courseId",
+  as: "courseMaterials",
 });
 
-export default Question;
+export default CourseMaterial;

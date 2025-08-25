@@ -1,18 +1,18 @@
-import { Response, Request } from "express";
 import { v4 as uuidv4 } from "uuid";
+import { Response, Request } from "express";
+import { Includeable, Op } from "sequelize";
 import z from "zod";
-import fs from "fs";
-import path from "path";
 import bcrypt from "bcrypt";
+
 import User from "../models/User";
 import Course from "../models/Course";
+import Lesson from "../models/Lesson";
+import Ticket from "../models/Ticket";
 import Student from "../models/Student";
 import Registration from "../models/Registration";
-import { ExpectedApiResponse } from "../Types/ApiTypes";
-import Ticket from "../models/Ticket";
-import { Includeable, Op } from "sequelize";
 import LessonProgress from "../models/LessonProgress";
-import Lesson from "../models/Lesson";
+
+import { ExpectedApiResponse } from "../Types/ApiTypes";
 
 import {
   PutObjectCommand,

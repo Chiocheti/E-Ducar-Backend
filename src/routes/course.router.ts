@@ -36,7 +36,10 @@ courseRoutes.post(
 courseRoutes.post(
   "/create",
   authenticate,
-  upload.single("image"),
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "documents", maxCount: 8 },
+  ]),
   async (req: Request, res: Response) => {
     await CourseController.create(req, res);
   }
@@ -56,6 +59,15 @@ courseRoutes.put(
   upload.single("image"),
   async (req: Request, res: Response) => {
     await CourseController.updateImage(req, res);
+  }
+);
+
+courseRoutes.post(
+  "/courseMaterials/create",
+  authenticate,
+  upload.array("documents"),
+  async (req: Request, res: Response) => {
+    await CourseController.updateCourseMaterial(req, res);
   }
 );
 

@@ -1,8 +1,10 @@
+import { Op } from "sequelize";
 import { Response, Request } from "express";
 import z from "zod";
-import { ExpectedApiResponse } from "../Types/ApiTypes";
+
 import Collaborator from "../models/Collaborator";
-import { Op } from "sequelize";
+
+import { ExpectedApiResponse } from "../Types/ApiTypes";
 
 const updateCollaboratorSchema = z.array(
   z.object({

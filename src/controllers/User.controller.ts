@@ -1,17 +1,16 @@
-import { Response, Request } from "express";
 import { v4 as uuidv4 } from "uuid";
-import z from "zod";
-import bcrypt from "bcrypt";
-
-import { ExpectedApiResponse } from "../Types/ApiTypes";
-
-import User from "../models/User";
-
+import { Response, Request } from "express";
 import {
   PutObjectCommand,
   S3Client,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+import z from "zod";
+import bcrypt from "bcrypt";
+
+import User from "../models/User";
+
+import { ExpectedApiResponse } from "../Types/ApiTypes";
 
 const awsRegion = process.env.AWS_REGION || "";
 const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
