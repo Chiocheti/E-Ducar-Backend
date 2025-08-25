@@ -13,6 +13,7 @@ import Lesson from "../models/Lesson";
 import Course from "../models/Course";
 import Question from "../models/Question";
 import QuestionOption from "../models/QuestionOption";
+import CourseMaterial from "../models/CourseMaterial";
 
 import { ExpectedApiResponse } from "../Types/ApiTypes";
 
@@ -20,6 +21,7 @@ const awsRegion = process.env.AWS_REGION || "";
 const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
 const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || "";
 const awsCoursesURL = process.env.S3_BUCKET_NAME_COURSES || "";
+const awsCourseMaterialsURL = process.env.S3_BUCKET_NAME_COURSE_MATERIALS || "";
 
 const s3client = new S3Client({
   region: awsRegion,
@@ -38,6 +40,13 @@ const createCourseSchema = z.object({
   support: z.number(),
   text: z.string(),
   userId: z.string(),
+  courseMaterials: z.array(
+    z.object({
+      name: z.string(),
+      docType: z.string(),
+      order: z.number(),
+    })
+  ),
   lessons: z.array(
     z.object({
       title: z.string(),
@@ -119,6 +128,16 @@ const updateCourseSchema = z.object({
 
 type UpdateCourseType = z.infer<typeof updateCourseSchema>;
 
+const createCourseMaterialSchema = z.array(
+  z.object({
+    name: z.string(),
+    docType: z.string(),
+    order: z.number(),
+  })
+);
+
+type CreateCourseMaterialType = z.infer<typeof createCourseMaterialSchema>;
+
 const CourseController = {
   async getAll(req: Request, res: Response) {
     try {
@@ -127,6 +146,12 @@ const CourseController = {
           {
             model: User,
             as: "user",
+          },
+          {
+            model: CourseMaterial,
+            as: "courseMaterials",
+            separate: true,
+            order: [["order", "ASC"]],
           },
           {
             model: Lesson,
@@ -330,11 +355,18 @@ const CourseController = {
   },
 
   async create(req: Request, res: Response) {
-    const fileContent = req.file?.buffer;
+    const files = req.files as {
+      image: Express.Multer.File[];
+      documents: Express.Multer.File[];
+    };
+
+    const image = files.image[0];
+    const documents = files.documents;
+
     const course: CreateCourseType = JSON.parse(req.body.course);
 
     try {
-      if (!fileContent) {
+      if (!image) {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
@@ -362,39 +394,69 @@ const CourseController = {
       const params = {
         Bucket: awsCoursesURL,
         Key: uuid,
-        Body: fileContent,
-        ContentType: req.file?.mimetype || "",
+        Body: image.buffer,
+        ContentType: image.mimetype,
       };
 
       await s3client.send(new PutObjectCommand(params));
 
-      await Course.create(
-        { ...course, isVisible: false, image: link },
-        {
-          include: [
-            {
-              model: Lesson,
-              as: "lessons",
-            },
-            {
-              model: Exam,
-              as: "exam",
-              include: [
-                {
-                  model: Question,
-                  as: "questions",
-                  include: [
-                    {
-                      model: QuestionOption,
-                      as: "questionOptions",
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        }
+      const newCourseMaterials = await Promise.all(
+        course.courseMaterials.map(async (material, index) => {
+          const materialUUID = uuidv4();
+          const materialLink = `https://${awsCourseMaterialsURL}.s3.${awsRegion}.amazonaws.com/${materialUUID}`;
+
+          const document = documents[index];
+
+          const materialParams = {
+            Bucket: awsCourseMaterialsURL,
+            Key: materialUUID,
+            Body: document.buffer,
+            ContentType: document.mimetype,
+          };
+
+          await s3client.send(new PutObjectCommand(materialParams));
+
+          return { ...material, link: materialLink };
+        })
       );
+
+      const newCourse = {
+        ...course,
+        isVisible: false,
+        image: link,
+        courseMaterials: newCourseMaterials,
+      };
+
+      console.log(newCourse);
+
+      await Course.create(newCourse, {
+        include: [
+          {
+            model: CourseMaterial,
+            as: "courseMaterials",
+          },
+          {
+            model: Lesson,
+            as: "lessons",
+          },
+          {
+            model: Exam,
+            as: "exam",
+            include: [
+              {
+                model: Question,
+                as: "questions",
+                include: [
+                  {
+                    model: QuestionOption,
+                    as: "questionOptions",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
@@ -580,6 +642,102 @@ const CourseController = {
         success: true,
         type: 0,
         data: "Alteração feita com sucesso",
+      };
+
+      return res.status(200).json(apiResponse);
+    } catch (error) {
+      console.log(error);
+
+      const apiResponse: ExpectedApiResponse = {
+        success: false,
+        type: 1,
+        data: JSON.stringify(error),
+      };
+
+      return res.status(500).json(apiResponse);
+    }
+  },
+
+  async updateCourseMaterial(req: Request, res: Response) {
+    const documents = req.files;
+
+    const courseMaterials: CreateCourseMaterialType = JSON.parse(
+      req.body.courseMaterials
+    );
+
+    console.log(documents);
+
+    console.log(courseMaterials);
+
+    // try {
+    //   if (!documents) {
+    //     const apiResponse: ExpectedApiResponse = {
+    //       success: false,
+    //       type: 3,
+    //       data: "Material é obrigatório",
+    //     };
+    //     return res.status(201).json(apiResponse);
+    //   }
+
+    //   documents.forEach(async (document) => {
+    //     const uuid = uuidv4();
+
+    //     const link = `https://${awsCourseMaterialsURL}.s3.${awsRegion}.amazonaws.com/${uuid}`;
+
+    //     const params = {
+    //       Bucket: awsCourseMaterialsURL,
+    //       Key: uuid,
+    //       Body: document.buffer,
+    //       ContentType: document.mimetype,
+    //     };
+
+    //     await s3client.send(new PutObjectCommand(params));
+    //   });
+
+    //   const apiResponse: ExpectedApiResponse = {
+    //     success: true,
+    //     type: 0,
+    //     data: link,
+    //   };
+
+    //   return res.status(200).json(apiResponse);
+    // } catch (error) {
+    //   console.log(error);
+
+    //   const apiResponse: ExpectedApiResponse = {
+    //     success: false,
+    //     type: 1,
+    //     data: JSON.stringify(error),
+    //   };
+
+    //   return res.status(500).json(apiResponse);
+    // }
+  },
+
+  async deleteCourseMaterialDocument(req: Request, res: Response) {
+    const material = req.file;
+
+    try {
+      if (!material) {
+        const apiResponse: ExpectedApiResponse = {
+          success: false,
+          type: 3,
+          data: "Material é obrigatório",
+        };
+        return res.status(201).json(apiResponse);
+      }
+
+      const deleteParams = {
+        Bucket: awsCourseMaterialsURL,
+        Key: materialLink,
+      };
+
+      await s3client.send(new DeleteObjectCommand(deleteParams));
+
+      const apiResponse: ExpectedApiResponse = {
+        success: true,
+        type: 0,
+        data: link,
       };
 
       return res.status(200).json(apiResponse);
