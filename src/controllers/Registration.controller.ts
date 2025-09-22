@@ -1,34 +1,43 @@
-const fs = require("fs");
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { Response, Request, NextFunction } from 'express';
+import fontkit from 'fontkit';
+import fs from 'fs';
+import { PDFDocument, rgb } from 'pdf-lib';
+import { Includeable, IncludeOptions } from 'sequelize';
+import z from 'zod';
 
-import { PDFDocument, rgb } from "pdf-lib";
-import { Response, Request } from "express";
-import { Includeable, IncludeOptions } from "sequelize";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import z from "zod";
-import fontkit from "fontkit";
+import sequelize from '../models';
+import Course from '../models/Course';
+import Exam from '../models/Exam';
+import Lesson from '../models/Lesson';
+import LessonProgress from '../models/LessonProgress';
+import Question from '../models/Question';
+import QuestionOption from '../models/QuestionOption';
+import Registration from '../models/Registration';
+import Student from '../models/Student';
+import Ticket from '../models/Ticket';
+import GenerateRandomString from '../utils/GenerateRandomString';
+import SplitString from '../utils/SplitString';
 
-import Course from "../models/Course";
-import Exam from "../models/Exam";
-import Lesson from "../models/Lesson";
-import LessonProgress from "../models/LessonProgress";
-import Question from "../models/Question";
-import QuestionOption from "../models/QuestionOption";
-import Registration from "../models/Registration";
-import Ticket from "../models/Ticket";
+const ubuntuBytes = fs.readFileSync('./src/fonts/UbuntuMono-Regular.ttf');
+const ubuntuItalicBytes = fs.readFileSync('./src/fonts/Ubuntu-RI.ttf');
+const ubuntuBoldBytes = fs.readFileSync('./src/fonts/Ubuntu-B.ttf');
 
-import { ExpectedApiResponse } from "../Types/ApiTypes";
+const awsRegion = process.env.AWS_REGION;
+const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
+const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+const awsSaveDegreeURL = process.env.S3_BUCKET_NAME_DEGREES;
+const degreeUrl = process.env.S3_DEGREE_TEMPLATE;
 
-import SplitString from "../utils/SplitString";
-import GenerateRandomString from "../utils/GenerateRandomString";
-
-const ubuntuBytes = fs.readFileSync("./src/fonts/UbuntuMono-Regular.ttf");
-const ubuntuItalicBytes = fs.readFileSync("./src/fonts/Ubuntu-RI.ttf");
-const ubuntuBoldBytes = fs.readFileSync("./src/fonts/Ubuntu-B.ttf");
-
-const awsRegion = process.env.AWS_REGION || "";
-const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
-const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || "";
-const awsSaveDegreeURL = process.env.S3_BUCKET_NAME_DEGREES || "";
+if (
+  !awsRegion ||
+  !awsAccessKeyId ||
+  !awsSecretAccessKey ||
+  !awsSaveDegreeURL ||
+  !degreeUrl
+) {
+  throw new Error('AWS credentials and bucket names must be set');
+}
 
 const s3client = new S3Client({
   region: awsRegion,
@@ -37,8 +46,6 @@ const s3client = new S3Client({
     secretAccessKey: awsSecretAccessKey,
   },
 });
-
-const degreeUrl = process.env.S3_DEGREE_TEMPLATE || "";
 
 const createRegistrationSchema = z.object({
   studentId: z.string(),
@@ -49,132 +56,117 @@ const createRegistrationSchema = z.object({
 
 type CreateRegistrationType = z.infer<typeof createRegistrationSchema>;
 
-const updateLessonProgressSchema = z.object({
-  watchedAt: z.string().optional(),
-});
-
-type UpdateLessonProgressType = z.infer<typeof updateLessonProgressSchema>;
-
-const updateRegistrationSchema = z.object({
-  registerData: z.object({
-    id: z.string(),
-    examResult: z.number(),
-    conclusionDate: z.string(),
-  }),
-  degreeData: z.object({
-    studentName: z.string(),
-    courseName: z.string(),
-    duration: z.string(),
-    conclusionDateToPrint: z.string(),
-  }),
-});
-
-type UpdateRegistrationType = z.infer<typeof updateRegistrationSchema>;
-
 const RegistrationController = {
-  async getById(req: Request, res: Response) {
-    const {
-      registrationId,
-      lessonProgress,
-      exam,
-    }: { registrationId: string; lessonProgress: boolean; exam: boolean } =
-      req.body;
+  async getById(req: Request, res: Response, next: NextFunction) {
+    const { id } = req.params;
 
-    let include: Includeable[] = [];
+    try {
+      const registration = await Registration.findByPk(id);
 
-    if (lessonProgress) {
-      const options: IncludeOptions = {
-        model: LessonProgress,
-        as: "lessonsProgress",
-        include: [
-          {
-            model: Lesson,
-            as: "lesson",
-          },
-        ],
-        order: [["lesson", "order"]],
-      };
+      if (!registration) {
+        return res.status(404).json({ message: 'Registro não encontrado' });
+      }
 
-      const options02: IncludeOptions = {
-        model: Course,
-        as: "course",
-      };
-
-      include.push(options, options02);
+      return res.status(200).json(registration);
+    } catch (error) {
+      next(error);
     }
+  },
 
-    if (exam) {
-      const options: IncludeOptions = {
-        model: Course,
-        as: "course",
+  async getByIdLessonProgress(req: Request, res: Response, next: NextFunction) {
+    const { id } = req.params;
+
+    try {
+      const registration = await Registration.findByPk(id, {
         include: [
           {
-            model: Exam,
-            as: "exam",
+            model: LessonProgress,
+            as: 'lessonsProgress',
             include: [
               {
-                model: Question,
-                as: "questions",
+                model: Lesson,
+                as: 'lesson',
+              },
+            ],
+          },
+          {
+            model: Course,
+            as: 'course',
+          },
+        ],
+        order: [['lessonsProgress', 'lesson', 'order']],
+      });
+
+      if (!registration) {
+        return res.status(404).json({ message: 'Registro não encontrado' });
+      }
+
+      return res.status(200).json(registration);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getByIdExam(req: Request, res: Response, next: NextFunction) {
+    const { id } = req.params;
+
+    try {
+      const registration = await Registration.findByPk(id, {
+        include: [
+          {
+            model: Course,
+            as: 'course',
+            include: [
+              {
+                model: Exam,
+                as: 'exam',
                 include: [
                   {
-                    model: QuestionOption,
-                    as: "questionOptions",
+                    model: Question,
+                    as: 'questions',
+                    include: [
+                      {
+                        model: QuestionOption,
+                        as: 'questionOptions',
+                      },
+                    ],
                   },
                 ],
               },
             ],
           },
         ],
-      };
-
-      include.push(options);
-    }
-
-    try {
-      const findRegistration = await Registration.findOne({
-        include,
-        where: { id: registrationId },
       });
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: JSON.stringify(findRegistration),
-      };
+      if (!registration) {
+        return res.status(404).json({ message: 'Registro não encontrado' });
+      }
 
-      return res.status(200).json(apiResponse);
+      return res.status(200).json(registration);
     } catch (error) {
-      console.log(error);
-
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      next(error);
     }
   },
 
-  async create(req: Request, res: Response) {
-    const {
-      registration,
-      ticket,
-    }: { registration: CreateRegistrationType; ticket: string | null } =
-      req.body;
+  async create(req: Request, res: Response, next: NextFunction) {
+    const { registration } = req.body;
+    const { ticket } = req.body;
+
+    console.log(' !! Start Transaction');
+    const transaction = await sequelize.transaction();
 
     try {
       const { success, error } =
         createRegistrationSchema.safeParse(registration);
 
       if (!success) {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 2,
-          data: JSON.stringify(error),
-        };
+        await transaction.rollback();
+        console.log(' < Rollback Transaction');
 
-        return res.status(201).json(apiResponse);
+        return res.status(400).json({
+          message: 'Erro de Validação',
+          error,
+        });
       }
 
       const findRegistration = await Registration.findOne({
@@ -185,163 +177,149 @@ const RegistrationController = {
       });
 
       if (findRegistration) {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 3,
-          data: JSON.stringify("Voce ja está matriculado nesse curso"),
-        };
+        await transaction.rollback();
+        console.log(' < Rollback Transaction');
 
-        return res.status(201).json(apiResponse);
+        return res.status(403).json({ message: 'Estudante já matriculado' });
       }
 
       let ticketId: string | null = null;
 
       if (ticket) {
-        const findTicket = await Ticket.findOne({ where: { code: ticket } });
+        const findTicket = await Ticket.findOne({
+          where: { code: ticket },
+        });
 
-        if (!findTicket) {
-          const apiResponse: ExpectedApiResponse = {
-            success: false,
-            type: 3,
-            data: JSON.stringify("Esse cupom não existe"),
-          };
-
-          return res.status(201).json(apiResponse);
+        if (!findTicket || findTicket.used) {
+          return res
+            .status(404)
+            .json({ message: 'Esse cupom não existe ou não é mais valido' });
         }
 
-        if (findTicket.used) {
-          const apiResponse: ExpectedApiResponse = {
-            success: false,
-            type: 3,
-            data: JSON.stringify("Esse cupom não  é mais valido"),
-          };
-
-          return res.status(201).json(apiResponse);
-        }
-
-        await findTicket.update({ used: true });
+        await findTicket.update({ used: true }, { transaction });
 
         ticketId = findTicket.id;
       }
-
-      const { id: registrationId } = await Registration.create({
-        ...registration,
-        ticketId,
-        conclusionDate: null,
-        examResult: null,
-        degreeLink: null,
-      });
 
       const findLessons = await Lesson.findAll({
         where: { courseId: registration.courseId },
       });
 
-      if (findLessons && registrationId) {
-        findLessons.forEach(async (lesson) => {
-          const lessonProgress = {
-            lessonId: lesson.id,
-            registrationId,
-            watchedAt: null,
-          };
+      const lessonsProgress = findLessons.map((lp) => ({
+        lessonId: lp.id,
+        watchedAt: null,
+      }));
 
-          await LessonProgress.create(lessonProgress);
-        });
-      }
+      const createdRegistration = await Registration.create(
+        {
+          ...registration,
+          ticketId,
+          conclusionDate: null,
+          examResult: null,
+          degreeLink: null,
+          lessonsProgress,
+        },
+        {
+          include: [
+            {
+              model: LessonProgress,
+              as: 'lessonsProgress',
+            },
+          ],
+          transaction,
+        },
+      );
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: JSON.stringify("Cadastro feito com sucesso"),
-      };
+      await transaction.commit();
+      console.log(' > Commit Transaction');
 
-      return res.status(200).json(apiResponse);
+      return res.status(201).json(createdRegistration);
     } catch (error) {
-      console.log(error);
+      await transaction.rollback();
+      console.log(' < Rollback Transaction');
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      next(error);
     }
   },
 
-  async updateLessonProgress(req: Request, res: Response) {
-    const {
-      id,
-      lessonProgress,
-    }: { id: string; lessonProgress: UpdateLessonProgressType } = req.body;
+  async updateLessonProgress(req: Request, res: Response, next: NextFunction) {
+    const { id } = req.body;
+
+    console.log(' !! Start Transaction');
+    const transaction = await sequelize.transaction();
 
     try {
-      const { success, error } =
-        updateLessonProgressSchema.safeParse(lessonProgress);
+      const findLessonProgress = await LessonProgress.findByPk(id);
 
-      if (!success) {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 2,
-          data: JSON.stringify(error),
-        };
+      if (!findLessonProgress) {
+        await transaction.rollback();
+        console.log(' < Rollback Transaction');
 
-        return res.status(201).json(apiResponse);
+        return res
+          .status(404)
+          .json({ message: 'Progresso da aula não encontrado' });
       }
 
-      await LessonProgress.update(lessonProgress, {
-        where: { id },
-      });
+      const now = new Date();
+      const mysqlDateTime = now.toISOString().slice(0, 19).replace('T', ' ');
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: "Aula editada com sucesso",
-      };
+      const newLessonProgress = await findLessonProgress.update(
+        { watchedAt: mysqlDateTime },
+        {
+          transaction,
+        },
+      );
 
-      return res.status(200).json(apiResponse);
+      await transaction.commit();
+      console.log(' > Commit Transaction');
+
+      return res.status(200).json(newLessonProgress);
     } catch (error) {
-      console.log(error);
+      await transaction.rollback();
+      console.log(' < Rollback Transaction');
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      next(error);
     }
   },
 
-  async finishCourse(req: Request, res: Response) {
-    const { finishData }: { finishData: UpdateRegistrationType } = req.body;
+  async finishCourse(req: Request, res: Response, next: NextFunction) {
+    const { id } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: 'Id é obrigatório' });
+    }
 
     const pdfResponse = await fetch(degreeUrl);
 
     if (!pdfResponse.ok) {
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 3,
-        data: JSON.stringify("Erro ao baixar ou encontrar o template"),
-      };
+      console.error('Erro ao baixar ou encontrar o template');
 
-      return res.status(500).json(apiResponse);
+      return res.status(500).json({ message: 'Erro interno no servidor' });
     }
 
+    const findRegistration = await Registration.findByPk(id, {
+      include: [
+        {
+          model: Student,
+          as: 'student',
+        },
+        {
+          model: Course,
+          as: 'course',
+        },
+      ],
+      raw: true,
+    });
+
+    if (!findRegistration) {
+      return res.status(404).json({ message: 'Matrícula não encontrada' });
+    }
+
+    console.log(findRegistration);
+
+    return res.status(200).json(findRegistration);
+
     try {
-      const { success, error } = updateRegistrationSchema.safeParse(finishData);
-
-      if (!success) {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 2,
-          data: JSON.stringify(error),
-        };
-
-        return res.status(201).json(apiResponse);
-      }
-
-      const { registerData, degreeData } = finishData;
-
       const arrayBuffer = await pdfResponse.arrayBuffer();
       const existingPdfBytes = new Uint8Array(arrayBuffer);
 
@@ -382,7 +360,7 @@ const RegistrationController = {
 
       const courseWidth = ubuntuItalicFont.widthOfTextAtSize(
         degreeData.courseName,
-        26
+        26,
       );
       page.drawText(degreeData.courseName, {
         x: 610 - courseWidth,
@@ -395,7 +373,7 @@ const RegistrationController = {
       const durationText = `Compreendido em ${degreeData.duration}`;
       const durationWidth = ubuntuItalicFont.widthOfTextAtSize(
         durationText,
-        26
+        26,
       );
       page.drawText(durationText, {
         x: 460 - durationWidth,
@@ -407,7 +385,7 @@ const RegistrationController = {
 
       const conclusionDateWidth = ubuntuItalicFont.widthOfTextAtSize(
         degreeData.conclusionDateToPrint,
-        26
+        26,
       );
       page.drawText(degreeData.conclusionDateToPrint, {
         x: 610 - conclusionDateWidth,
@@ -436,7 +414,7 @@ const RegistrationController = {
         Bucket: awsSaveDegreeURL,
         Key: randomCode,
         Body: pdfBuffer,
-        ContentType: "application/pdf",
+        ContentType: 'application/pdf',
       };
 
       await s3client.send(new PutObjectCommand(params));
@@ -449,13 +427,13 @@ const RegistrationController = {
           conclusionDate: registerData.conclusionDate,
           examResult: registerData.examResult,
         },
-        { where: { id: registerData.id } }
+        { where: { id: registerData.id } },
       );
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: "Aula editada com sucesso",
+        data: 'Aula editada com sucesso',
       };
 
       return res.status(200).json(apiResponse);
@@ -476,35 +454,18 @@ const RegistrationController = {
     const { id } = req.query;
 
     try {
-      if (!id || typeof id !== "string") {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 2,
-          data: JSON.stringify("Id não informado"),
-        };
-
-        return res.status(201).json(apiResponse);
+      if (!id || typeof id !== 'string') {
+        return res.status(404).json({ message: 'Id não informado' });
       }
 
       await Registration.destroy({ where: { id } });
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: "Matricula excluída com sucesso",
-      };
-
-      return res.status(200).json(apiResponse);
+      return res.status(201).send();
     } catch (error) {
+      console.error(`Internal Server Error: ${error}`);
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      return res.status(500).json({ message: 'Erro interno no servidor' });
     }
   },
 };

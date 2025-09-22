@@ -1,8 +1,8 @@
-import { Model, DataTypes } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
+import { Model, DataTypes } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
 
-import db from "./";
-import User from "./User";
+import db from '.';
+import User from './User';
 
 class Course extends Model {
   declare id: string;
@@ -31,11 +31,11 @@ Course.init(
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: "users",
-        key: "id",
+        model: 'users',
+        key: 'id',
       },
-      onUpdate: "CASCADE",
-      onDelete: "CASCADE",
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     },
     name: {
       type: DataTypes.STRING,
@@ -78,7 +78,7 @@ Course.init(
   },
   {
     sequelize: db,
-    tableName: "courses",
+    tableName: 'courses',
     timestamps: false,
     underscored: true,
     hooks: {
@@ -86,17 +86,17 @@ Course.init(
         item.id = uuidv4();
       },
     },
-  }
+  },
 );
 
 Course.belongsTo(User, {
-  foreignKey: "userId",
-  as: "user",
+  foreignKey: 'userId',
+  as: 'user',
 });
 
 User.hasMany(Course, {
-  foreignKey: "userId",
-  as: "courses",
+  foreignKey: 'userId',
+  as: 'courses',
 });
 
 export default Course;

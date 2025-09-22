@@ -1,19 +1,18 @@
-import { Op } from "sequelize";
-import { Response, Request } from "express";
-import z from "zod";
+import { Response, Request } from 'express';
+import { Op } from 'sequelize';
+import z from 'zod';
 
-import Course from "../models/Course";
-import Ticket from "../models/Ticket";
-import Student from "../models/Student";
-import Registration from "../models/Registration";
-
-import { ExpectedApiResponse } from "../Types/ApiTypes";
+import Course from '../models/Course';
+import Registration from '../models/Registration';
+import Student from '../models/Student';
+import Ticket from '../models/Ticket';
 
 const createTicketsSchema = z.array(
   z.object({
     code: z.string(),
+    collaboratorId: z.string(),
     used: z.boolean(),
-  })
+  }),
 );
 
 type CreateTicketsType = z.infer<typeof createTicketsSchema>;
@@ -23,23 +22,12 @@ const TicketController = {
     try {
       const tickets = await Ticket.findAll();
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: JSON.stringify(tickets),
-      };
-
-      return res.status(200).json(apiResponse);
+      return res.status(200).json(tickets);
     } catch (error) {
+      console.error(`Internal Server Error: ${error}`);
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      return res.status(500).json({ message: 'Erro interno no servidor' });
     }
   },
 
@@ -62,17 +50,17 @@ const TicketController = {
           include: [
             {
               model: Registration,
-              as: "registrations",
+              as: 'registrations',
               required: true,
               where: { ticketId: { [Op.is]: null } },
               include: [
                 {
                   model: Ticket,
-                  as: "ticket",
+                  as: 'ticket',
                 },
                 {
                   model: Course,
-                  as: "course",
+                  as: 'course',
                 },
               ],
             },
@@ -88,16 +76,16 @@ const TicketController = {
             : {},
           offset,
           limit: pageRange || 100000,
-          order: ["name"],
+          order: ['name'],
         });
 
         const total = await Student.count({
           distinct: true,
-          col: "id",
+          col: 'id',
           include: [
             {
               model: Registration,
-              as: "registrations",
+              as: 'registrations',
               required: true,
               where: { ticketId: { [Op.is]: null } },
             },
@@ -113,29 +101,23 @@ const TicketController = {
             : {},
         });
 
-        const apiResponse: ExpectedApiResponse = {
-          success: true,
-          type: 0,
-          data: JSON.stringify({ students, total }),
-        };
-
-        return res.status(200).json(apiResponse);
+        return res.status(200).json({ students, total });
       }
 
-      if (collaboratorId === "off") {
+      if (collaboratorId === 'off') {
         const students = await Student.findAll({
           include: [
             {
               model: Registration,
-              as: "registrations",
+              as: 'registrations',
               include: [
                 {
                   model: Ticket,
-                  as: "ticket",
+                  as: 'ticket',
                 },
                 {
                   model: Course,
-                  as: "course",
+                  as: 'course',
                 },
               ],
             },
@@ -151,21 +133,21 @@ const TicketController = {
             : {},
           offset,
           limit: pageRange || 100000,
-          order: ["name"],
+          order: ['name'],
         });
 
         const total = await Student.count({
           distinct: true,
-          col: "id",
+          col: 'id',
           include: [
             {
               model: Registration,
-              as: "registrations",
+              as: 'registrations',
               required: true,
               include: [
                 {
                   model: Ticket,
-                  as: "ticket",
+                  as: 'ticket',
                 },
               ],
             },
@@ -181,30 +163,24 @@ const TicketController = {
             : {},
         });
 
-        const apiResponse: ExpectedApiResponse = {
-          success: true,
-          type: 0,
-          data: JSON.stringify({ students, total }),
-        };
-
-        return res.status(200).json(apiResponse);
+        return res.status(200).json({ students, total });
       }
 
       const students = await Student.findAll({
         include: [
           {
             model: Registration,
-            as: "registrations",
+            as: 'registrations',
             include: [
               {
                 model: Ticket,
-                as: "ticket",
+                as: 'ticket',
                 required: true,
                 where: { collaboratorId },
               },
               {
                 model: Course,
-                as: "course",
+                as: 'course',
               },
             ],
           },
@@ -220,21 +196,21 @@ const TicketController = {
           : {},
         offset,
         limit: pageRange || 100000,
-        order: ["name"],
+        order: ['name'],
       });
 
       const total = await Student.count({
         distinct: true,
-        col: "id",
+        col: 'id',
         include: [
           {
             model: Registration,
-            as: "registrations",
+            as: 'registrations',
             required: true,
             include: [
               {
                 model: Ticket,
-                as: "ticket",
+                as: 'ticket',
                 required: true,
                 where: { collaboratorId },
               },
@@ -252,61 +228,36 @@ const TicketController = {
           : {},
       });
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: JSON.stringify({ students, total }),
-      };
-
-      return res.status(200).json(apiResponse);
+      return res.status(200).json({ students, total });
     } catch (error) {
+      console.error(`Internal Server Error: ${error}`);
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      return res.status(500).json({ message: 'Erro interno no servidor' });
     }
   },
 
-  async createTickets(req: Request, res: Response) {
+  async create(req: Request, res: Response) {
     try {
       const { tickets }: { tickets: CreateTicketsType } = req.body;
 
       const { success, error } = createTicketsSchema.safeParse(tickets);
 
       if (!success) {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 2,
-          data: JSON.stringify(error),
-        };
-
-        return res.status(201).json(apiResponse);
+        return res.status(422).json({
+          message: 'Erro de validação nos dados enviados',
+          error,
+        });
       }
 
       await Ticket.bulkCreate(tickets);
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: JSON.stringify("Tickets criados com sucesso!"),
-      };
-
-      return res.status(200).json(apiResponse);
+      return res.status(204).send();
     } catch (error) {
+      console.error(`Internal Server Error: ${error}`);
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      return res.status(500).json({ message: 'Erro interno no servidor' });
     }
   },
 };

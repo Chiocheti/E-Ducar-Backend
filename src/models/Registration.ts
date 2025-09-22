@@ -1,11 +1,10 @@
-import { Model, DataTypes } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
+import { Model, DataTypes } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
 
-import db from "./";
-
-import Student from "./Student";
-import Course from "./Course";
-import Ticket from "./Ticket";
+import db from '.';
+import Course from './Course';
+import Student from './Student';
+import Ticket from './Ticket';
 
 class Registration extends Model {
   declare id: string;
@@ -32,31 +31,31 @@ Registration.init(
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: "students",
-        key: "id",
+        model: 'students',
+        key: 'id',
       },
-      onUpdate: "CASCADE",
-      onDelete: "CASCADE",
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     },
     courseId: {
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: "courses",
-        key: "id",
+        model: 'courses',
+        key: 'id',
       },
-      onUpdate: "CASCADE",
-      onDelete: "CASCADE",
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     },
     ticketId: {
       type: DataTypes.UUID,
       allowNull: true,
       references: {
-        model: "tickets",
-        key: "id",
+        model: 'tickets',
+        key: 'id',
       },
-      onUpdate: "CASCADE",
-      onDelete: "CASCADE",
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     },
     registerDate: {
       type: DataTypes.DATEONLY,
@@ -81,7 +80,7 @@ Registration.init(
   },
   {
     sequelize: db,
-    tableName: "registrations",
+    tableName: 'registrations',
     timestamps: false,
     underscored: true,
     hooks: {
@@ -89,37 +88,37 @@ Registration.init(
         item.id = uuidv4();
       },
     },
-  }
+  },
 );
 
 Registration.belongsTo(Student, {
-  foreignKey: "studentId",
-  as: "student",
+  foreignKey: 'studentId',
+  as: 'student',
 });
 
 Student.hasMany(Registration, {
-  foreignKey: "studentId",
-  as: "registrations",
+  foreignKey: 'studentId',
+  as: 'registrations',
 });
 
 Registration.belongsTo(Course, {
-  foreignKey: "courseId",
-  as: "course",
+  foreignKey: 'courseId',
+  as: 'course',
 });
 
 Course.hasMany(Registration, {
-  foreignKey: "courseId",
-  as: "registrations",
+  foreignKey: 'courseId',
+  as: 'registrations',
 });
 
 Registration.belongsTo(Ticket, {
-  foreignKey: "ticketId",
-  as: "ticket",
+  foreignKey: 'ticketId',
+  as: 'ticket',
 });
 
 Ticket.hasOne(Registration, {
-  foreignKey: "ticketId",
-  as: "registration",
+  foreignKey: 'ticketId',
+  as: 'registration',
 });
 
 export default Registration;

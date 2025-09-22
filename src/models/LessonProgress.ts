@@ -1,9 +1,9 @@
-import { DataTypes, Model } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
+import { DataTypes, Model } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
 
-import db from "./";
-import Registration from "./Registration";
-import Lesson from "./Lesson";
+import db from '.';
+import Lesson from './Lesson';
+import Registration from './Registration';
 
 class LessonProgress extends Model {
   declare id: string;
@@ -25,21 +25,21 @@ LessonProgress.init(
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: "registrations",
-        key: "id",
+        model: 'registrations',
+        key: 'id',
       },
-      onUpdate: "CASCADE",
-      onDelete: "CASCADE",
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     },
     lessonId: {
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: "lessons",
-        key: "id",
+        model: 'lessons',
+        key: 'id',
       },
-      onUpdate: "CASCADE",
-      onDelete: "CASCADE",
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     },
     watchedAt: {
       type: DataTypes.DATE,
@@ -48,7 +48,7 @@ LessonProgress.init(
   },
   {
     sequelize: db,
-    tableName: "lessons_progress",
+    tableName: 'lessons_progress',
     timestamps: false,
     underscored: true,
     hooks: {
@@ -56,27 +56,27 @@ LessonProgress.init(
         item.id = uuidv4();
       },
     },
-  }
+  },
 );
 
 LessonProgress.belongsTo(Registration, {
-  foreignKey: "registrationId",
-  as: "registration",
+  foreignKey: 'registrationId',
+  as: 'registration',
 });
 
 LessonProgress.belongsTo(Lesson, {
-  foreignKey: "lessonId",
-  as: "lesson",
+  foreignKey: 'lessonId',
+  as: 'lesson',
 });
 
 Registration.hasMany(LessonProgress, {
-  foreignKey: "registrationId",
-  as: "lessonsProgress",
+  foreignKey: 'registrationId',
+  as: 'lessonsProgress',
 });
 
 Lesson.hasMany(LessonProgress, {
-  foreignKey: "lessonId",
-  as: "lessonsProgress",
+  foreignKey: 'lessonId',
+  as: 'lessonsProgress',
 });
 
 export default LessonProgress;

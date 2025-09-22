@@ -1,7 +1,7 @@
-import { Model, DataTypes } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
+import { Model, DataTypes } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
 
-import db from "./";
+import db from '.';
 
 class Collaborator extends Model {
   declare id: string;
@@ -29,7 +29,7 @@ Collaborator.init(
   },
   {
     sequelize: db,
-    tableName: "collaborators",
+    tableName: 'collaborators',
     timestamps: false,
     underscored: true,
     hooks: {
@@ -37,7 +37,7 @@ Collaborator.init(
         item.id = uuidv4();
       },
     },
-  }
+  },
 );
 
 export default Collaborator;

@@ -1,9 +1,7 @@
-"use strict";
-
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("students", {
+    await queryInterface.createTable('students', {
       id: {
         type: Sequelize.UUID,
         primaryKey: true,
@@ -42,17 +40,17 @@ module.exports = {
       created_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
       updated_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
     });
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable("students");
+    await queryInterface.dropTable('students');
   },
 };
