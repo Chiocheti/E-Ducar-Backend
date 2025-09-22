@@ -1,9 +1,7 @@
-"use strict";
-
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("registrations", {
+    await queryInterface.createTable('registrations', {
       id: {
         type: Sequelize.UUID,
         primaryKey: true,
@@ -15,31 +13,31 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: "students",
-          key: "id",
+          model: 'students',
+          key: 'id',
         },
-        onUpdate: "CASCADE",
-        onDelete: "CASCADE",
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
       },
       course_id: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: "courses",
-          key: "id",
+          model: 'courses',
+          key: 'id',
         },
-        onUpdate: "CASCADE",
-        onDelete: "CASCADE",
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
       },
       ticket_id: {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: "tickets",
-          key: "id",
+          model: 'tickets',
+          key: 'id',
         },
-        onUpdate: "CASCADE",
-        onDelete: "CASCADE",
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
       },
       register_date: {
         type: Sequelize.DATEONLY,
@@ -64,17 +62,17 @@ module.exports = {
       created_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
       updated_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
     });
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable("registrations");
+    await queryInterface.dropTable('registrations');
   },
 };
