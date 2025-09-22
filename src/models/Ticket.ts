@@ -1,8 +1,8 @@
-import { Model, DataTypes } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
+import { Model, DataTypes } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
 
-import db from "./";
-import Collaborator from "./Collaborator";
+import db from '.';
+import Collaborator from './Collaborator';
 
 class Ticket extends Model {
   declare id: string;
@@ -22,13 +22,13 @@ Ticket.init(
     },
     collaboratorId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
       references: {
-        model: "collaborators",
-        key: "id",
+        model: 'collaborators',
+        key: 'id',
       },
-      onUpdate: "CASCADE",
-      onDelete: "CASCADE",
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     },
     code: {
       type: DataTypes.STRING,
@@ -42,7 +42,7 @@ Ticket.init(
   },
   {
     sequelize: db,
-    tableName: "tickets",
+    tableName: 'tickets',
     timestamps: false,
     underscored: true,
     hooks: {
@@ -50,17 +50,17 @@ Ticket.init(
         item.id = uuidv4();
       },
     },
-  }
+  },
 );
 
 Ticket.belongsTo(Collaborator, {
-  foreignKey: "collaboratorId",
-  as: "collaborator",
+  foreignKey: 'collaboratorId',
+  as: 'collaborator',
 });
 
 Collaborator.hasMany(Ticket, {
-  foreignKey: "collaboratorId",
-  as: "tickets",
+  foreignKey: 'collaboratorId',
+  as: 'tickets',
 });
 
 export default Ticket;

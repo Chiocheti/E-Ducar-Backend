@@ -1,8 +1,8 @@
-import { DataTypes, Model } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
+import { DataTypes, Model } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
 
-import db from "./";
-import Question from "./Question";
+import db from '.';
+import Question from './Question';
 
 class QuestionOption extends Model {
   declare id: string;
@@ -25,11 +25,11 @@ QuestionOption.init(
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: "questions",
-        key: "id",
+        model: 'questions',
+        key: 'id',
       },
-      onUpdate: "CASCADE",
-      onDelete: "CASCADE",
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     },
     answer: {
       type: DataTypes.STRING,
@@ -46,7 +46,7 @@ QuestionOption.init(
   },
   {
     sequelize: db,
-    tableName: "question_options",
+    tableName: 'question_options',
     timestamps: false,
     underscored: true,
     hooks: {
@@ -54,17 +54,17 @@ QuestionOption.init(
         item.id = uuidv4();
       },
     },
-  }
+  },
 );
 
 QuestionOption.belongsTo(Question, {
-  foreignKey: "questionId",
-  as: "question",
+  foreignKey: 'questionId',
+  as: 'question',
 });
 
 Question.hasMany(QuestionOption, {
-  foreignKey: "questionId",
-  as: "questionOptions",
+  foreignKey: 'questionId',
+  as: 'questionOptions',
 });
 
 export default QuestionOption;

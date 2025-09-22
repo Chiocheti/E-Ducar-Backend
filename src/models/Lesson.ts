@@ -1,8 +1,8 @@
-import { Model, DataTypes } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
+import { Model, DataTypes } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
 
-import db from "./";
-import Course from "./Course";
+import db from '.';
+import Course from './Course';
 
 class Lesson extends Model {
   declare id: string;
@@ -26,11 +26,11 @@ Lesson.init(
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: "courses",
-        key: "id",
+        model: 'courses',
+        key: 'id',
       },
-      onUpdate: "CASCADE",
-      onDelete: "CASCADE",
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     },
     title: {
       type: DataTypes.STRING,
@@ -51,7 +51,7 @@ Lesson.init(
   },
   {
     sequelize: db,
-    modelName: "lessons",
+    modelName: 'lessons',
     timestamps: false,
     underscored: true,
     hooks: {
@@ -59,17 +59,17 @@ Lesson.init(
         item.id = uuidv4();
       },
     },
-  }
+  },
 );
 
 Lesson.belongsTo(Course, {
-  foreignKey: "courseId",
-  as: "course",
+  foreignKey: 'courseId',
+  as: 'course',
 });
 
 Course.hasMany(Lesson, {
-  foreignKey: "courseId",
-  as: "lessons",
+  foreignKey: 'courseId',
+  as: 'lessons',
 });
 
 export default Lesson;

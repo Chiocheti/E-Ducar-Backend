@@ -1,8 +1,7 @@
-import { Model } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
+import sequelize, { Model } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
 
-import db from "./";
-import sequelize from "sequelize";
+import db from '.';
 
 class User extends Model {
   declare id: string;
@@ -50,7 +49,7 @@ User.init(
   },
   {
     sequelize: db,
-    tableName: "users",
+    tableName: 'users',
     timestamps: false,
     underscored: true,
     hooks: {
@@ -58,7 +57,7 @@ User.init(
         item.id = uuidv4();
       },
     },
-  }
+  },
 );
 
 export default User;

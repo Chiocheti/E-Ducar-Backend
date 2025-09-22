@@ -1,7 +1,7 @@
-import { Model, DataTypes } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
+import { Model, DataTypes } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
 
-import db from "./";
+import db from '.';
 
 class Student extends Model {
   declare id: string;
@@ -54,7 +54,7 @@ Student.init(
   },
   {
     sequelize: db,
-    tableName: "students",
+    tableName: 'students',
     timestamps: false,
     underscored: true,
     hooks: {
@@ -62,7 +62,7 @@ Student.init(
         item.id = uuidv4();
       },
     },
-  }
+  },
 );
 
 export default Student;
