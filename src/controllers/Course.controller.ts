@@ -1,27 +1,37 @@
-import { v4 as uuidv4 } from "uuid";
-import { Response, Request } from "express";
 import {
   PutObjectCommand,
   S3Client,
   DeleteObjectCommand,
-} from "@aws-sdk/client-s3";
-import z from "zod";
+} from '@aws-sdk/client-s3';
+import { Response, Request } from 'express';
+import { Op } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
+import z from 'zod';
 
-import User from "../models/User";
-import Exam from "../models/Exam";
-import Lesson from "../models/Lesson";
-import Course from "../models/Course";
-import Question from "../models/Question";
-import QuestionOption from "../models/QuestionOption";
-import CourseMaterial from "../models/CourseMaterial";
+import sequelize from '../models';
+import Course from '../models/Course';
+import CourseMaterial from '../models/CourseMaterial';
+import Exam from '../models/Exam';
+import Lesson from '../models/Lesson';
+import Question from '../models/Question';
+import QuestionOption from '../models/QuestionOption';
+import User from '../models/User';
 
-import { ExpectedApiResponse } from "../Types/ApiTypes";
+const awsRegion = process.env.AWS_REGION;
+const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
+const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+const awsCoursesURL = process.env.S3_BUCKET_NAME_COURSES;
+const awsCourseMaterialsURL = process.env.S3_BUCKET_NAME_COURSE_MATERIALS;
 
-const awsRegion = process.env.AWS_REGION || "";
-const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
-const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || "";
-const awsCoursesURL = process.env.S3_BUCKET_NAME_COURSES || "";
-const awsCourseMaterialsURL = process.env.S3_BUCKET_NAME_COURSE_MATERIALS || "";
+if (
+  !awsRegion ||
+  !awsAccessKeyId ||
+  !awsSecretAccessKey ||
+  !awsCoursesURL ||
+  !awsCourseMaterialsURL
+) {
+  throw new Error('AWS credentials and bucket names must be set');
+}
 
 const s3client = new S3Client({
   region: awsRegion,
@@ -45,7 +55,7 @@ const createCourseSchema = z.object({
       name: z.string(),
       docType: z.string(),
       order: z.number(),
-    })
+    }),
   ),
   lessons: z.array(
     z.object({
@@ -53,7 +63,7 @@ const createCourseSchema = z.object({
       description: z.string(),
       order: z.number(),
       videoLink: z.string(),
-    })
+    }),
   ),
   exam: z.object({
     title: z.string(),
@@ -67,9 +77,9 @@ const createCourseSchema = z.object({
             answer: z.string(),
             isAnswer: z.boolean(),
             order: z.number(),
-          })
+          }),
         ),
-      })
+      }),
     ),
   }),
 });
@@ -96,7 +106,7 @@ const updateCourseSchema = z.object({
         description: z.string(),
         order: z.number(),
         videoLink: z.string(),
-      })
+      }),
     )
     .optional(),
   exam: z
@@ -118,25 +128,15 @@ const updateCourseSchema = z.object({
               answer: z.string(),
               isAnswer: z.boolean(),
               order: z.number(),
-            })
+            }),
           ),
-        })
+        }),
       ),
     })
     .optional(),
 });
 
 type UpdateCourseType = z.infer<typeof updateCourseSchema>;
-
-const createCourseMaterialSchema = z.array(
-  z.object({
-    name: z.string(),
-    docType: z.string(),
-    order: z.number(),
-  })
-);
-
-type CreateCourseMaterialType = z.infer<typeof createCourseMaterialSchema>;
 
 const CourseController = {
   async getAll(req: Request, res: Response) {
@@ -145,61 +145,65 @@ const CourseController = {
         include: [
           {
             model: User,
-            as: "user",
+            as: 'user',
           },
+        ],
+        order: [['name', 'ASC']],
+      });
+
+      return res.status(200).json(courses);
+    } catch (error) {
+      console.error(`Internal Server Error: ${error}`);
+      console.log(error);
+
+      return res.status(500).json({ message: 'Erro interno no servidor' });
+    }
+  },
+
+  async getAllDetails(req: Request, res: Response) {
+    try {
+      const courses = await Course.findAll({
+        include: [
           {
-            model: CourseMaterial,
-            as: "courseMaterials",
-            separate: true,
-            order: [["order", "ASC"]],
+            model: User,
+            as: 'user',
           },
           {
             model: Lesson,
-            as: "lessons",
+            as: 'lessons',
             separate: true,
-            order: [["order", "ASC"]],
+            order: [['order', 'ASC']],
           },
           {
             model: Exam,
-            as: "exam",
+            as: 'exam',
             include: [
               {
                 model: Question,
-                as: "questions",
+                as: 'questions',
                 separate: true,
-                order: [["order", "ASC"]],
+                order: [['order', 'ASC']],
                 include: [
                   {
                     model: QuestionOption,
-                    as: "questionOptions",
+                    as: 'questionOptions',
                     separate: true,
-                    order: [["order", "ASC"]],
+                    order: [['order', 'ASC']],
                   },
                 ],
               },
             ],
           },
         ],
-        order: [["name", "ASC"]],
+        order: [['name', 'ASC']],
       });
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: JSON.stringify(courses),
-      };
-
-      return res.status(200).json(apiResponse);
+      return res.status(200).json(courses);
     } catch (error) {
+      console.error(`Internal Server Error: ${error}`);
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      return res.status(500).json({ message: 'Erro interno no servidor' });
     }
   },
 
@@ -209,26 +213,51 @@ const CourseController = {
         include: [
           {
             model: User,
-            as: "user",
+            as: 'user',
+          },
+        ],
+        where: { isVisible: true },
+        order: ['name'],
+      });
+
+      return res.status(200).json(courses);
+    } catch (error) {
+      console.error(`Internal Server Error: ${error}`);
+      console.log(error);
+
+      return res.status(500).json({ message: 'Erro interno no servidor' });
+    }
+  },
+
+  async getOpenDetails(req: Request, res: Response) {
+    try {
+      const courses = await Course.findAll({
+        include: [
+          {
+            model: User,
+            as: 'user',
           },
           {
             model: Lesson,
-            as: "lessons",
-            order: [["order", "ASC"]],
+            as: 'lessons',
+            separate: true,
+            order: [['order', 'ASC']],
           },
           {
             model: Exam,
-            as: "exam",
+            as: 'exam',
             include: [
               {
                 model: Question,
-                as: "questions",
-                order: [["order", "ASC"]],
+                as: 'questions',
+                separate: true,
+                order: [['order', 'ASC']],
                 include: [
                   {
                     model: QuestionOption,
-                    as: "questionOptions",
-                    order: [["order", "ASC"]],
+                    as: 'questionOptions',
+                    separate: true,
+                    order: [['order', 'ASC']],
                   },
                 ],
               },
@@ -236,57 +265,75 @@ const CourseController = {
           },
         ],
         where: { isVisible: true },
-        order: ["name"],
+        order: ['name'],
       });
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: JSON.stringify(courses),
-      };
-
-      return res.status(200).json(apiResponse);
+      return res.status(200).json(courses);
     } catch (error) {
+      console.error(`Internal Server Error: ${error}`);
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      return res.status(500).json({ message: 'Erro interno no servidor' });
     }
   },
 
   async getById(req: Request, res: Response) {
     try {
-      const { id }: { id: string } = req.body;
+      const { id } = req.params;
 
-      const courses = await Course.findByPk(id, {
+      const course = await Course.findByPk(id, {
         include: [
           {
             model: User,
-            as: "user",
+            as: 'user',
+          },
+        ],
+      });
+
+      if (!course) {
+        return res.status(404).json({ message: 'Curso não encontrado' });
+      }
+
+      return res.status(200).json(course);
+    } catch (error) {
+      console.error(`Internal Server Error: ${error}`);
+      console.log(error);
+
+      return res.status(500).json({ message: 'Erro interno no servidor' });
+    }
+  },
+
+  async getByIdDetails(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+
+      const course = await Course.findByPk(id, {
+        include: [
+          {
+            model: User,
+            as: 'user',
           },
           {
             model: Lesson,
-            as: "lessons",
-            order: [["order", "ASC"]],
+            as: 'lessons',
+            separate: true,
+            order: [['order', 'ASC']],
           },
           {
             model: Exam,
-            as: "exam",
+            as: 'exam',
             include: [
               {
                 model: Question,
-                as: "questions",
-                order: [["order", "ASC"]],
+                as: 'questions',
+                separate: true,
+                order: [['order', 'ASC']],
                 include: [
                   {
                     model: QuestionOption,
-                    as: "questionOptions",
-                    order: [["order", "ASC"]],
+                    as: 'questionOptions',
+                    separate: true,
+                    order: [['order', 'ASC']],
                   },
                 ],
               },
@@ -295,62 +342,48 @@ const CourseController = {
         ],
       });
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: JSON.stringify(courses),
-      };
+      if (!course) {
+        return res.status(404).json({ message: 'Curso não encontrado' });
+      }
 
-      return res.status(200).json(apiResponse);
+      return res.status(200).json(course);
     } catch (error) {
+      console.error(`Internal Server Error: ${error}`);
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      return res.status(500).json({ message: 'Erro interno no servidor' });
     }
   },
 
   async getByName(req: Request, res: Response) {
     try {
-      const { courseName }: { courseName: string } = req.body;
+      const { name } = req.params;
 
       const course = await Course.findOne({
         include: [
           {
             model: User,
-            as: "user",
+            as: 'user',
           },
           {
             model: Lesson,
-            as: "lessons",
+            as: 'lessons',
           },
         ],
-        where: { name: courseName },
-        order: [["lessons", "order", "ASC"]],
+        where: { name },
+        order: [['lessons', 'order', 'ASC']],
       });
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: JSON.stringify(course),
-      };
+      if (!course) {
+        return res.status(404).json({ message: 'Curso não encontrado' });
+      }
 
-      return res.status(200).json(apiResponse);
+      return res.status(200).json(course);
     } catch (error) {
+      console.error(`Internal Server Error: ${error}`);
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      return res.status(500).json({ message: 'Erro interno no servidor' });
     }
   },
 
@@ -361,30 +394,28 @@ const CourseController = {
     };
 
     const image = files.image[0];
-    const documents = files.documents;
+    const { documents } = files;
 
     const course: CreateCourseType = JSON.parse(req.body.course);
 
-    try {
-      if (!image) {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 3,
-          data: "Imagem é obrigatória",
-        };
-        return res.status(201).json(apiResponse);
-      }
+    if (!image) {
+      return res.status(400).json({ message: 'Imagem obrigatória' });
+    }
 
+    console.log(' !! Start Transaction');
+    const transaction = await sequelize.transaction();
+
+    try {
       const { success, error } = createCourseSchema.safeParse(course);
 
       if (!success) {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 2,
-          data: JSON.stringify(error),
-        };
+        await transaction.rollback();
+        console.log(' < Rollback Transaction');
 
-        return res.status(201).json(apiResponse);
+        return res.status(400).json({
+          message: 'Erro de Validação',
+          error,
+        });
       }
 
       const uuid = uuidv4();
@@ -417,205 +448,224 @@ const CourseController = {
           await s3client.send(new PutObjectCommand(materialParams));
 
           return { ...material, link: materialLink };
-        })
+        }),
       );
 
-      const newCourse = {
+      const newCourseData = {
         ...course,
         isVisible: false,
         image: link,
         courseMaterials: newCourseMaterials,
       };
 
-      console.log(newCourse);
-
-      await Course.create(newCourse, {
+      await Course.create(newCourseData, {
         include: [
           {
             model: CourseMaterial,
-            as: "courseMaterials",
+            as: 'courseMaterials',
           },
           {
             model: Lesson,
-            as: "lessons",
+            as: 'lessons',
           },
           {
             model: Exam,
-            as: "exam",
+            as: 'exam',
             include: [
               {
                 model: Question,
-                as: "questions",
+                as: 'questions',
                 include: [
                   {
                     model: QuestionOption,
-                    as: "questionOptions",
+                    as: 'questionOptions',
                   },
                 ],
               },
             ],
           },
         ],
+        transaction,
       });
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: "Curso cadastrado com sucesso",
-      };
+      await transaction.commit();
+      console.log(' > Commit Transaction');
 
-      return res.status(200).json(apiResponse);
+      return res.status(201).send({ message: 'Curso criado com sucesso' });
     } catch (error) {
+      await transaction.rollback();
+      console.log(' < Rollback Transaction');
+
+      console.error(`Internal Server Error: ${error}`);
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      return res.status(500).json({ message: 'Erro interno no servidor' });
     }
   },
 
   async update(req: Request, res: Response) {
     const { course }: { course: UpdateCourseType } = req.body;
 
+    console.log(' !! Start Transaction');
+    const transaction = await sequelize.transaction();
+
     try {
-      const { success: courseSuccess, error: courseError } =
-        updateCourseSchema.safeParse(course);
+      const { success, error } = updateCourseSchema.safeParse(course);
 
-      if (!courseSuccess) {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 2,
-          data: JSON.stringify(courseError),
-        };
+      if (!success) {
+        await transaction.rollback();
+        console.log(' < Rollback Transaction');
 
-        return res.status(201).json(apiResponse);
+        return res.status(400).json({
+          message: 'Erro de Validação',
+          error,
+        });
       }
 
       const { lessons, exam, ...courseRest } = course;
 
-      await Course.update(courseRest, { where: { id: course.id } });
+      await Course.update(courseRest, {
+        where: { id: course.id },
+        transaction,
+      });
 
       if (lessons) {
-        const findLessons = await Lesson.findAll({
-          where: { courseId: course.id },
+        const lessonsIds = lessons
+          .map((l) => l.id)
+          .filter((id) => id !== undefined);
+
+        await Lesson.destroy({
+          where: {
+            courseId: courseRest.id,
+            id: { [Op.notIn]: lessonsIds },
+          },
+          transaction,
         });
 
-        for (const lesson of findLessons) {
-          if (!lessons.some((item) => lesson.id === item.id)) {
-            await lesson.destroy();
-          }
-        }
-
-        for (const lesson of lessons) {
-          if (lesson.id) {
-            await Lesson.update(lesson, { where: { id: lesson.id } });
-          } else {
-            await Lesson.create({ ...lesson, courseId: course.id });
-          }
-        }
+        await Promise.all(
+          lessons.map(async (lesson) => {
+            if (lesson.id) {
+              await Lesson.update(lesson, {
+                where: { id: lesson.id },
+                transaction,
+              });
+            } else {
+              await Lesson.create(
+                { ...lesson, courseId: course.id },
+                {
+                  transaction,
+                },
+              );
+            }
+          }),
+        );
       }
 
       if (exam) {
         const { questions } = exam;
 
-        await Exam.update(exam, { where: { id: exam.id } });
-
-        const findQuestions = await Question.findAll({
-          where: { examId: exam.id },
+        await Exam.update(exam, {
+          where: { id: exam.id },
+          transaction,
         });
 
-        for (const question of findQuestions) {
-          if (!questions.some((item) => question.id === item.id)) {
-            await question.destroy();
-          }
-        }
+        const questionsIds = questions
+          .map((q) => q.id)
+          .filter((id) => id !== undefined);
 
-        for (const question of questions) {
-          if (!question.id) {
-            await Question.create(
-              { ...question, examId: exam.id },
-              {
-                include: [
-                  {
-                    model: QuestionOption,
-                    as: "questionOptions",
+        await Question.destroy({
+          where: {
+            examId: exam.id,
+            id: { [Op.notIn]: questionsIds },
+          },
+          transaction,
+        });
+
+        await Promise.all(
+          questions.map(async (question) => {
+            if (!question.id) {
+              await Question.create(
+                { ...question, examId: exam.id },
+                {
+                  include: [
+                    {
+                      model: QuestionOption,
+                      as: 'questionsOptions',
+                    },
+                  ],
+                  transaction,
+                },
+              );
+            } else {
+              const { questionOptions, ...questionRest } = question;
+
+              await Question.update(questionRest, {
+                where: { id: questionRest.id },
+                transaction,
+              });
+
+              const questionOptionsId = questionOptions
+                .map((q) => q.id)
+                .filter((id) => id !== undefined);
+
+              await QuestionOption.destroy({
+                where: {
+                  id: {
+                    [Op.notIn]: questionOptionsId,
                   },
-                ],
-              }
-            );
-          } else {
-            await Question.update(question, { where: { id: question.id } });
+                  questionId: questionRest.id,
+                },
+                transaction,
+              });
 
-            const findQuestionOptions = await QuestionOption.findAll({
-              where: { questionId: question.id },
-            });
-
-            for (const questionOption of findQuestionOptions) {
-              if (
-                !question.questionOptions.some(
-                  (item) => questionOption.id === item.id
-                )
-              ) {
-                await questionOption.destroy();
-              }
+              questionOptions.map(async (questionOption) => {
+                if (!questionOption.id) {
+                  await QuestionOption.create(
+                    {
+                      ...questionOption,
+                      questionId: question.id,
+                    },
+                    {
+                      transaction,
+                    },
+                  );
+                } else {
+                  await QuestionOption.update(questionOption, {
+                    where: { id: questionOption.id },
+                    transaction,
+                  });
+                }
+              });
             }
-
-            for (const questionOption of question.questionOptions) {
-              if (!questionOption.id) {
-                await QuestionOption.create({
-                  ...questionOption,
-                  questionId: question.id,
-                });
-              } else {
-                await QuestionOption.update(questionOption, {
-                  where: { id: questionOption.id },
-                });
-              }
-            }
-          }
-        }
+          }),
+        );
       }
 
-      console.log("Acabou");
+      await transaction.commit();
+      console.log(' > Commit Transaction');
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: "Curso editado com sucesso",
-      };
-
-      return res.status(200).json(apiResponse);
+      return res.status(204).send();
     } catch (error) {
+      await transaction.rollback();
+      console.log(' < Rollback Transaction');
+
+      console.error(`Internal Server Error: ${error}`);
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      return res.status(500).json({ message: 'Erro interno no servidor' });
     }
   },
 
   async updateImage(req: Request, res: Response) {
     const fileContent = req.file?.buffer;
-    const { imageLink, id }: { imageLink: string; id: string } = req.body;
+    const { id } = req.body;
+    const { imageLink } = req.body;
+
+    if (!fileContent) {
+      return res.status(400).json({ message: 'Imagem obrigatória' });
+    }
 
     try {
-      if (!fileContent) {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 3,
-          data: "Imagem é obrigatória",
-        };
-        return res.status(201).json(apiResponse);
-      }
-
       const deleteParams = {
         Bucket: awsCoursesURL,
         Key: imageLink,
@@ -631,126 +681,19 @@ const CourseController = {
         Bucket: awsCoursesURL,
         Key: uuid,
         Body: fileContent,
-        ContentType: req.file?.mimetype || "",
+        ContentType: req.file?.mimetype || '',
       };
 
       await s3client.send(new PutObjectCommand(params));
 
       await Course.update({ image: link }, { where: { id } });
 
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: "Alteração feita com sucesso",
-      };
-
-      return res.status(200).json(apiResponse);
+      return res.status(204).send();
     } catch (error) {
+      console.error(`Internal Server Error: ${error}`);
       console.log(error);
 
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
-    }
-  },
-
-  async updateCourseMaterial(req: Request, res: Response) {
-    const documents = req.files;
-
-    const courseMaterials: CreateCourseMaterialType = JSON.parse(
-      req.body.courseMaterials
-    );
-
-    console.log(documents);
-
-    console.log(courseMaterials);
-
-    // try {
-    //   if (!documents) {
-    //     const apiResponse: ExpectedApiResponse = {
-    //       success: false,
-    //       type: 3,
-    //       data: "Material é obrigatório",
-    //     };
-    //     return res.status(201).json(apiResponse);
-    //   }
-
-    //   documents.forEach(async (document) => {
-    //     const uuid = uuidv4();
-
-    //     const link = `https://${awsCourseMaterialsURL}.s3.${awsRegion}.amazonaws.com/${uuid}`;
-
-    //     const params = {
-    //       Bucket: awsCourseMaterialsURL,
-    //       Key: uuid,
-    //       Body: document.buffer,
-    //       ContentType: document.mimetype,
-    //     };
-
-    //     await s3client.send(new PutObjectCommand(params));
-    //   });
-
-    //   const apiResponse: ExpectedApiResponse = {
-    //     success: true,
-    //     type: 0,
-    //     data: link,
-    //   };
-
-    //   return res.status(200).json(apiResponse);
-    // } catch (error) {
-    //   console.log(error);
-
-    //   const apiResponse: ExpectedApiResponse = {
-    //     success: false,
-    //     type: 1,
-    //     data: JSON.stringify(error),
-    //   };
-
-    //   return res.status(500).json(apiResponse);
-    // }
-  },
-
-  async deleteCourseMaterialDocument(req: Request, res: Response) {
-    const material = req.file;
-
-    try {
-      if (!material) {
-        const apiResponse: ExpectedApiResponse = {
-          success: false,
-          type: 3,
-          data: "Material é obrigatório",
-        };
-        return res.status(201).json(apiResponse);
-      }
-
-      const deleteParams = {
-        Bucket: awsCourseMaterialsURL,
-        Key: materialLink,
-      };
-
-      await s3client.send(new DeleteObjectCommand(deleteParams));
-
-      const apiResponse: ExpectedApiResponse = {
-        success: true,
-        type: 0,
-        data: link,
-      };
-
-      return res.status(200).json(apiResponse);
-    } catch (error) {
-      console.log(error);
-
-      const apiResponse: ExpectedApiResponse = {
-        success: false,
-        type: 1,
-        data: JSON.stringify(error),
-      };
-
-      return res.status(500).json(apiResponse);
+      return res.status(500).json({ message: 'Erro interno no servidor' });
     }
   },
 };

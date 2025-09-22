@@ -1,29 +1,30 @@
-import { v4 as uuidv4 } from "uuid";
-import { Response, Request } from "express";
-import { Includeable, Op } from "sequelize";
-import z from "zod";
-import bcrypt from "bcrypt";
-
-import User from "../models/User";
-import Course from "../models/Course";
-import Lesson from "../models/Lesson";
-import Ticket from "../models/Ticket";
-import Student from "../models/Student";
-import Registration from "../models/Registration";
-import LessonProgress from "../models/LessonProgress";
-
-import { ExpectedApiResponse } from "../Types/ApiTypes";
-
 import {
   PutObjectCommand,
   S3Client,
   DeleteObjectCommand,
-} from "@aws-sdk/client-s3";
+} from '@aws-sdk/client-s3';
+import bcrypt from 'bcrypt';
+import { Response, Request } from 'express';
+import { Includeable, Op } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
+import z from 'zod';
 
-const awsRegion = process.env.AWS_REGION || "";
-const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
-const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || "";
-const awsStudentsUrl = process.env.S3_BUCKET_NAME_STUDENTS || "";
+import Course from '../models/Course';
+import Lesson from '../models/Lesson';
+import LessonProgress from '../models/LessonProgress';
+import Registration from '../models/Registration';
+import Student from '../models/Student';
+import Ticket from '../models/Ticket';
+import User from '../models/User';
+
+const awsRegion = process.env.AWS_REGION;
+const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
+const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+const awsStudentsUrl = process.env.S3_BUCKET_NAME_STUDENTS;
+
+if (!awsRegion || !awsAccessKeyId || !awsSecretAccessKey || !awsStudentsUrl) {
+  throw new Error('AWS credentials and bucket names must be set');
+}
 
 const s3client = new S3Client({
   region: awsRegion,
@@ -62,29 +63,29 @@ const StudentController = {
     if (registrations) {
       include.push({
         model: Registration,
-        as: "registrations",
+        as: 'registrations',
         required: false,
         include: [
           {
             model: Course,
-            as: "course",
+            as: 'course',
             include: [
               {
                 model: User,
-                as: "user",
+                as: 'user',
               },
             ],
           },
           {
             model: LessonProgress,
-            as: "lessonsProgress",
+            as: 'lessonsProgress',
             include: [
               {
                 model: Lesson,
-                as: "lesson",
+                as: 'lesson',
               },
             ],
-            order: [["lesson", "order"]],
+            order: [['lesson', 'order']],
           },
         ],
       });
@@ -92,7 +93,7 @@ const StudentController = {
 
     try {
       const student = await Student.findOne({
-        attributes: { exclude: ["password", "refreshToken"] },
+        attributes: { exclude: ['password', 'refreshToken'] },
         include,
         where: { id },
       });
@@ -101,7 +102,7 @@ const StudentController = {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: "Aluno não encontrado",
+          data: 'Aluno não encontrado',
         };
 
         return res.status(201).json(apiResponse);
@@ -151,7 +152,7 @@ const StudentController = {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: "Este email ja está em uso",
+          data: 'Este email ja está em uso',
         };
 
         return res.status(201).json(apiResponse);
@@ -168,7 +169,7 @@ const StudentController = {
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: "Estudante cadastrado com sucesso",
+        data: 'Estudante cadastrado com sucesso',
       };
 
       return res.status(200).json(apiResponse);
@@ -201,7 +202,7 @@ const StudentController = {
       }[];
     };
 
-    const student: CreateStudentType = req.body.student;
+    const { student } = req.body;
 
     try {
       const findStudent = await Student.findOne({
@@ -212,7 +213,7 @@ const StudentController = {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: "Este email ja está em uso",
+          data: 'Este email ja está em uso',
         };
 
         return res.status(201).json(apiResponse);
@@ -228,24 +229,24 @@ const StudentController = {
         include: [
           {
             model: Registration,
-            as: "registrations",
+            as: 'registrations',
           },
         ],
       });
 
       const ticketIds = student.registrations.map(
-        (registration) => registration.ticketId
+        (registration) => registration.ticketId,
       );
 
       await Ticket.update(
         { used: true },
-        { where: { id: { [Op.in]: ticketIds } } }
+        { where: { id: { [Op.in]: ticketIds } } },
       );
 
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: "Estudante cadastrado com sucesso",
+        data: 'Estudante cadastrado com sucesso',
       };
 
       return res.status(200).json(apiResponse);
@@ -293,7 +294,7 @@ const StudentController = {
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: "Estudante editado com sucesso",
+        data: 'Estudante editado com sucesso',
       };
 
       return res.status(200).json(apiResponse);
@@ -320,7 +321,7 @@ const StudentController = {
         const apiResponse: ExpectedApiResponse = {
           success: false,
           type: 3,
-          data: "Imagem é obrigatória",
+          data: 'Imagem é obrigatória',
         };
         return res.status(201).json(apiResponse);
       }
@@ -342,7 +343,7 @@ const StudentController = {
         Bucket: awsStudentsUrl,
         Key: uuid,
         Body: fileContent,
-        ContentType: req.file?.mimetype || "",
+        ContentType: req.file?.mimetype || '',
       };
 
       await s3client.send(new PutObjectCommand(params));
@@ -352,7 +353,7 @@ const StudentController = {
       const apiResponse: ExpectedApiResponse = {
         success: true,
         type: 0,
-        data: "Foto de perfil editada com sucesso",
+        data: 'Foto de perfil editada com sucesso',
       };
 
       return res.status(200).json(apiResponse);

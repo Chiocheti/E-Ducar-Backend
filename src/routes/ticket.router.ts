@@ -1,33 +1,24 @@
-import { Response, Request } from "express";
-import { Router } from "express";
-import authenticate from "../middlewares/auth";
+import { Response, Request, Router } from 'express';
 
-import TicketController from "../controllers/Ticket.controller";
+import TicketController from '../controllers/Ticket.controller';
+import authenticate from '../middlewares/auth';
 
 const ticketRoutes = Router();
 
-ticketRoutes.get(
-  "/findAll",
-  authenticate,
-  async (req: Request, res: Response) => {
-    await TicketController.findAll(req, res);
-  }
-);
+ticketRoutes.get('/', authenticate, async (req: Request, res: Response) => {
+  await TicketController.findAll(req, res);
+});
+
+ticketRoutes.post('/', authenticate, async (req: Request, res: Response) => {
+  await TicketController.create(req, res);
+});
 
 ticketRoutes.post(
-  "/create",
-  authenticate,
-  async (req: Request, res: Response) => {
-    await TicketController.createTickets(req, res);
-  }
-);
-
-ticketRoutes.post(
-  "/search",
+  '/search',
   authenticate,
   async (req: Request, res: Response) => {
     await TicketController.search(req, res);
-  }
+  },
 );
 
 export default ticketRoutes;
