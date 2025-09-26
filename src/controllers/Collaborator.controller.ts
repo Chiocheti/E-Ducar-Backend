@@ -82,11 +82,7 @@ const CollaboratorController = {
       await transaction.commit();
       console.log(' > Commit Transaction');
 
-      const updatedCollaborators = await Collaborator.findAll({
-        order: ['name'],
-      });
-
-      return res.status(200).json(updatedCollaborators);
+      return res.status(204).send();
     } catch (error) {
       await transaction.rollback();
       console.log(' < Rollback Transaction');
