@@ -34,12 +34,12 @@ const TicketController = {
   async search(req: Request, res: Response) {
     try {
       const {
-        studentName,
+        filter,
         collaboratorId,
         offset,
         pageRange,
       }: {
-        studentName: string | null;
+        filter: string | null;
         collaboratorId: string | null;
         offset: number;
         pageRange: number;
@@ -65,17 +65,17 @@ const TicketController = {
               ],
             },
           ],
-          where: studentName
+          where: filter
             ? {
                 [Op.or]: {
-                  name: { [Op.like]: `%${studentName}%` },
-                  email: { [Op.like]: `%${studentName}%` },
-                  phone: { [Op.like]: `%${studentName}%` },
+                  name: { [Op.like]: `%${filter}%` },
+                  email: { [Op.like]: `%${filter}%` },
+                  phone: { [Op.like]: `%${filter}%` },
                 },
               }
             : {},
           offset,
-          limit: pageRange || 100000,
+          limit: pageRange || undefined,
           order: ['name'],
         });
 
@@ -90,12 +90,12 @@ const TicketController = {
               where: { ticketId: { [Op.is]: null } },
             },
           ],
-          where: studentName
+          where: filter
             ? {
                 [Op.or]: {
-                  name: { [Op.like]: `%${studentName}%` },
-                  email: { [Op.like]: `%${studentName}%` },
-                  phone: { [Op.like]: `%${studentName}%` },
+                  name: { [Op.like]: `%${filter}%` },
+                  email: { [Op.like]: `%${filter}%` },
+                  phone: { [Op.like]: `%${filter}%` },
                 },
               }
             : {},
@@ -122,17 +122,17 @@ const TicketController = {
               ],
             },
           ],
-          where: studentName
+          where: filter
             ? {
                 [Op.or]: {
-                  name: { [Op.like]: `%${studentName}%` },
-                  email: { [Op.like]: `%${studentName}%` },
-                  phone: { [Op.like]: `%${studentName}%` },
+                  name: { [Op.like]: `%${filter}%` },
+                  email: { [Op.like]: `%${filter}%` },
+                  phone: { [Op.like]: `%${filter}%` },
                 },
               }
             : {},
           offset,
-          limit: pageRange || 100000,
+          limit: pageRange || undefined,
           order: ['name'],
         });
 
@@ -152,12 +152,12 @@ const TicketController = {
               ],
             },
           ],
-          where: studentName
+          where: filter
             ? {
                 [Op.or]: {
-                  name: { [Op.like]: `%${studentName}%` },
-                  email: { [Op.like]: `%${studentName}%` },
-                  phone: { [Op.like]: `%${studentName}%` },
+                  name: { [Op.like]: `%${filter}%` },
+                  email: { [Op.like]: `%${filter}%` },
+                  phone: { [Op.like]: `%${filter}%` },
                 },
               }
             : {},
@@ -185,17 +185,17 @@ const TicketController = {
             ],
           },
         ],
-        where: studentName
+        where: filter
           ? {
               [Op.or]: {
-                name: { [Op.like]: `%${studentName}%` },
-                email: { [Op.like]: `%${studentName}%` },
-                phone: { [Op.like]: `%${studentName}%` },
+                name: { [Op.like]: `%${filter}%` },
+                email: { [Op.like]: `%${filter}%` },
+                phone: { [Op.like]: `%${filter}%` },
               },
             }
           : {},
         offset,
-        limit: pageRange || 100000,
+        limit: pageRange || undefined,
         order: ['name'],
       });
 
@@ -217,12 +217,12 @@ const TicketController = {
             ],
           },
         ],
-        where: studentName
+        where: filter
           ? {
               [Op.or]: {
-                name: { [Op.like]: `%${studentName}%` },
-                email: { [Op.like]: `%${studentName}%` },
-                phone: { [Op.like]: `%${studentName}%` },
+                name: { [Op.like]: `%${filter}%` },
+                email: { [Op.like]: `%${filter}%` },
+                phone: { [Op.like]: `%${filter}%` },
               },
             }
           : {},
