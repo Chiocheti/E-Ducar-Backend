@@ -4,16 +4,16 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '.';
 import Course from './Course';
 
-class CourseMaterial extends Model {
+class Material extends Model {
   declare id: string;
   declare courseId: string;
-  declare name: string;
-  declare docType: string;
-  declare link: string;
+  declare filename: string;
+  declare mimetype: string;
+  declare fileUrl: string;
   declare order: number;
 }
 
-CourseMaterial.init(
+Material.init(
   {
     id: {
       type: DataTypes.UUID,
@@ -32,15 +32,15 @@ CourseMaterial.init(
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
     },
-    name: {
+    filename: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    docType: {
+    mimetype: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    link: {
+    fileUrl: {
       type: DataTypes.STRING,
       allowNull: false,
     },
@@ -51,7 +51,7 @@ CourseMaterial.init(
   },
   {
     sequelize: db,
-    tableName: 'course_materials',
+    tableName: 'materials',
     timestamps: false,
     underscored: true,
     hooks: {
@@ -62,14 +62,14 @@ CourseMaterial.init(
   },
 );
 
-CourseMaterial.belongsTo(Course, {
+Material.belongsTo(Course, {
   foreignKey: 'courseId',
   as: 'course',
 });
 
-Course.hasMany(CourseMaterial, {
+Course.hasMany(Material, {
   foreignKey: 'courseId',
-  as: 'courseMaterials',
+  as: 'materials',
 });
 
-export default CourseMaterial;
+export default Material;

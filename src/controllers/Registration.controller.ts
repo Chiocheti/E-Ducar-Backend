@@ -163,7 +163,7 @@ const RegistrationController = {
         await transaction.rollback();
         console.log(' < Rollback Transaction');
 
-        return res.status(400).json({
+        return res.status(422).json({
           message: 'Erro de Validação',
           error,
         });

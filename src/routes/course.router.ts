@@ -72,7 +72,16 @@ courseRoutes.put('/', authenticate, async (req: Request, res: Response) => {
 });
 
 courseRoutes.put(
-  '/updateImage',
+  '/materials',
+  authenticate,
+  upload.fields([{ name: 'documents' }]),
+  async (req: Request, res: Response) => {
+    await CourseController.updateMaterials(req, res);
+  },
+);
+
+courseRoutes.put(
+  '/image',
   authenticate,
   upload.single('image'),
   async (req: Request, res: Response) => {
