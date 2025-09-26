@@ -2,6 +2,7 @@ import {
   PutObjectCommand,
   S3Client,
   DeleteObjectCommand,
+  DeleteObjectRequest,
 } from '@aws-sdk/client-s3';
 import { Response, Request } from 'express';
 import { Op } from 'sequelize';
@@ -10,9 +11,9 @@ import z from 'zod';
 
 import sequelize from '../models';
 import Course from '../models/Course';
-import CourseMaterial from '../models/CourseMaterial';
 import Exam from '../models/Exam';
 import Lesson from '../models/Lesson';
+import Material from '../models/Material';
 import Question from '../models/Question';
 import QuestionOption from '../models/QuestionOption';
 import User from '../models/User';
@@ -50,13 +51,15 @@ const createCourseSchema = z.object({
   support: z.number(),
   text: z.string(),
   userId: z.string(),
-  courseMaterials: z.array(
-    z.object({
-      name: z.string(),
-      docType: z.string(),
-      order: z.number(),
-    }),
-  ),
+  materials: z
+    .array(
+      z.object({
+        filename: z.string(),
+        mimetype: z.string(),
+        order: z.number(),
+      }),
+    )
+    .optional(),
   lessons: z.array(
     z.object({
       title: z.string(),
@@ -138,6 +141,30 @@ const updateCourseSchema = z.object({
 
 type UpdateCourseType = z.infer<typeof updateCourseSchema>;
 
+const updateMaterialSchema = z.array(
+  z.object({
+    id: z.string(),
+    fileUrl: z.string(),
+    courseId: z.string(),
+    filename: z.string(),
+    mimetype: z.string(),
+    order: z.number(),
+  }),
+);
+
+type UpdateMaterialType = z.infer<typeof updateMaterialSchema>;
+
+const createMaterialSchema = z.array(
+  z.object({
+    courseId: z.string(),
+    filename: z.string(),
+    mimetype: z.string(),
+    order: z.number(),
+  }),
+);
+
+type CreateMaterialType = z.infer<typeof createMaterialSchema>;
+
 const CourseController = {
   async getAll(req: Request, res: Response) {
     try {
@@ -171,8 +198,10 @@ const CourseController = {
           {
             model: Lesson,
             as: 'lessons',
-            separate: true,
-            order: [['order', 'ASC']],
+          },
+          {
+            model: Material,
+            as: 'materials',
           },
           {
             model: Exam,
@@ -181,21 +210,23 @@ const CourseController = {
               {
                 model: Question,
                 as: 'questions',
-                separate: true,
-                order: [['order', 'ASC']],
                 include: [
                   {
                     model: QuestionOption,
                     as: 'questionOptions',
-                    separate: true,
-                    order: [['order', 'ASC']],
                   },
                 ],
               },
             ],
           },
         ],
-        order: [['name', 'ASC']],
+        order: [
+          ['name', 'ASC'],
+          ['lessons', 'order', 'ASC'],
+          ['materials', 'order', 'ASC'],
+          ['exam', 'questions', 'order', 'ASC'],
+          ['exam', 'questions', 'questionOptions', 'order', 'ASC'],
+        ],
       });
 
       return res.status(200).json(courses);
@@ -244,20 +275,25 @@ const CourseController = {
             order: [['order', 'ASC']],
           },
           {
+            model: Material,
+            as: 'materials',
+            order: [['order', 'ASC']],
+          },
+          {
             model: Exam,
             as: 'exam',
             include: [
               {
                 model: Question,
                 as: 'questions',
-                separate: true,
-                order: [['order', 'ASC']],
+                // separate: true,
+                // order: [['order', 'ASC']],
                 include: [
                   {
                     model: QuestionOption,
                     as: 'questionOptions',
-                    separate: true,
-                    order: [['order', 'ASC']],
+                    // separate: true,
+                    // order: [['order', 'ASC']],
                   },
                 ],
               },
@@ -265,7 +301,13 @@ const CourseController = {
           },
         ],
         where: { isVisible: true },
-        order: ['name'],
+        order: [
+          ['name', 'ASC'],
+          ['lessons', 'order', 'ASC'],
+          ['materials', 'order', 'ASC'],
+          ['questions', 'order', 'ASC'],
+          ['questionOptions', 'order', 'ASC'],
+        ],
       });
 
       return res.status(200).json(courses);
@@ -317,6 +359,11 @@ const CourseController = {
             model: Lesson,
             as: 'lessons',
             separate: true,
+            order: [['order', 'ASC']],
+          },
+          {
+            model: Material,
+            as: 'materials',
             order: [['order', 'ASC']],
           },
           {
@@ -412,7 +459,7 @@ const CourseController = {
         await transaction.rollback();
         console.log(' < Rollback Transaction');
 
-        return res.status(400).json({
+        return res.status(422).json({
           message: 'Erro de Validação',
           error,
         });
@@ -431,38 +478,47 @@ const CourseController = {
 
       await s3client.send(new PutObjectCommand(params));
 
-      const newCourseMaterials = await Promise.all(
-        course.courseMaterials.map(async (material, index) => {
-          const materialUUID = uuidv4();
-          const materialLink = `https://${awsCourseMaterialsURL}.s3.${awsRegion}.amazonaws.com/${materialUUID}`;
+      let newMaterials: {
+        fileUrl: string;
+        filename: string;
+        mimetype: string;
+        order: number;
+      }[] = [];
 
-          const document = documents[index];
+      if (course.materials) {
+        newMaterials = await Promise.all(
+          course.materials.map(async (material, index) => {
+            const materialUUID = uuidv4();
+            const materialLink = `https://${awsCourseMaterialsURL}.s3.${awsRegion}.amazonaws.com/${materialUUID}`;
 
-          const materialParams = {
-            Bucket: awsCourseMaterialsURL,
-            Key: materialUUID,
-            Body: document.buffer,
-            ContentType: document.mimetype,
-          };
+            const document = documents[index];
 
-          await s3client.send(new PutObjectCommand(materialParams));
+            const materialParams = {
+              Bucket: awsCourseMaterialsURL,
+              Key: materialUUID,
+              Body: document.buffer,
+              ContentType: document.mimetype,
+            };
 
-          return { ...material, link: materialLink };
-        }),
-      );
+            await s3client.send(new PutObjectCommand(materialParams));
+
+            return { ...material, fileUrl: materialLink };
+          }),
+        );
+      }
 
       const newCourseData = {
         ...course,
         isVisible: false,
         image: link,
-        courseMaterials: newCourseMaterials,
+        materials: newMaterials,
       };
 
       await Course.create(newCourseData, {
         include: [
           {
-            model: CourseMaterial,
-            as: 'courseMaterials',
+            model: Material,
+            as: 'materials',
           },
           {
             model: Lesson,
@@ -491,7 +547,7 @@ const CourseController = {
       await transaction.commit();
       console.log(' > Commit Transaction');
 
-      return res.status(201).send({ message: 'Curso criado com sucesso' });
+      return res.status(204).send();
     } catch (error) {
       await transaction.rollback();
       console.log(' < Rollback Transaction');
@@ -516,7 +572,7 @@ const CourseController = {
         await transaction.rollback();
         console.log(' < Rollback Transaction');
 
-        return res.status(400).json({
+        return res.status(422).json({
           message: 'Erro de Validação',
           error,
         });
@@ -618,28 +674,165 @@ const CourseController = {
                 transaction,
               });
 
-              questionOptions.map(async (questionOption) => {
-                if (!questionOption.id) {
-                  await QuestionOption.create(
-                    {
-                      ...questionOption,
-                      questionId: question.id,
-                    },
-                    {
+              await Promise.all(
+                questionOptions.map(async (questionOption) => {
+                  if (!questionOption.id) {
+                    await QuestionOption.create(
+                      {
+                        ...questionOption,
+                        questionId: question.id,
+                      },
+                      { transaction },
+                    );
+                  } else {
+                    await QuestionOption.update(questionOption, {
+                      where: { id: questionOption.id },
                       transaction,
-                    },
-                  );
-                } else {
-                  await QuestionOption.update(questionOption, {
-                    where: { id: questionOption.id },
-                    transaction,
-                  });
-                }
-              });
+                    });
+                  }
+                }),
+              );
             }
           }),
         );
       }
+
+      await transaction.commit();
+      console.log(' > Commit Transaction');
+
+      return res.status(204).send();
+    } catch (error) {
+      await transaction.rollback();
+      console.log(' < Rollback Transaction');
+
+      console.error(`Internal Server Error: ${error}`);
+      console.log(error);
+
+      return res.status(500).json({ message: 'Erro interno no servidor' });
+    }
+  },
+
+  async updateMaterials(req: Request, res: Response) {
+    const { documents } = req.files as {
+      documents: Express.Multer.File[];
+    };
+
+    const {
+      courseId,
+      createMaterials: cm,
+      updateMaterials: um,
+    }: {
+      courseId: string;
+      createMaterials: string;
+      updateMaterials: string;
+    } = req.body;
+
+    const createMaterials: CreateMaterialType = JSON.parse(cm);
+    const updateMaterials: UpdateMaterialType = JSON.parse(um);
+
+    console.log(' !! Start Transaction');
+    const transaction = await sequelize.transaction();
+
+    try {
+      if (!courseId) {
+        await transaction.rollback();
+        console.log(' < Rollback Transaction');
+
+        return res.status(404).json({ message: 'Id do curso não informado' });
+      }
+
+      if (createMaterials.length > 0) {
+        const { success, error } =
+          createMaterialSchema.safeParse(createMaterials);
+
+        if (!success) {
+          await transaction.rollback();
+          console.log(' < Rollback Transaction');
+
+          return res.status(422).json({
+            message: 'Erro de Validação em CreateMaterials',
+            error,
+          });
+        }
+      }
+
+      if (updateMaterials.length > 0) {
+        const { success, error } =
+          updateMaterialSchema.safeParse(updateMaterials);
+
+        if (!success) {
+          await transaction.rollback();
+          console.log(' < Rollback Transaction');
+
+          return res.status(422).json({
+            message: 'Erro de Validação em UpdateMaterials',
+            error,
+          });
+        }
+      }
+
+      const materialIds = updateMaterials?.map((material) => material.id);
+
+      const materialsToDelete = await Material.findAll({
+        where: {
+          id: { [Op.notIn]: materialIds },
+          courseId,
+        },
+      });
+
+      await Promise.all(
+        materialsToDelete.map(async (materialToDelete) => {
+          const deleteParams: DeleteObjectRequest = {
+            Bucket: awsCourseMaterialsURL,
+            Key: materialToDelete.fileUrl.slice(-36),
+          };
+
+          const command = new DeleteObjectCommand(deleteParams);
+
+          await s3client.send(command);
+        }),
+      );
+
+      await Material.destroy({
+        where: {
+          id: { [Op.notIn]: materialIds },
+          courseId,
+        },
+        transaction,
+      });
+
+      await Promise.all(
+        updateMaterials.map(async (material) => {
+          await Material.update(material, {
+            where: { id: material.id },
+            transaction,
+          });
+        }),
+      );
+
+      await Promise.all(
+        createMaterials.map(async (material, index) => {
+          const materialUUID = uuidv4();
+          const materialLink = `https://${awsCourseMaterialsURL}.s3.${awsRegion}.amazonaws.com/${materialUUID}`;
+
+          const document = documents[index];
+          const materialParams = {
+            Bucket: awsCourseMaterialsURL,
+            Key: materialUUID,
+            Body: document.buffer,
+            ContentType: document.mimetype,
+          };
+
+          await s3client.send(new PutObjectCommand(materialParams));
+
+          await Material.create(
+            { ...material, fileUrl: materialLink },
+            {
+              transaction,
+            },
+          );
+        }),
+      );
 
       await transaction.commit();
       console.log(' > Commit Transaction');
