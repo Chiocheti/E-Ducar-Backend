@@ -1,7 +1,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('course_materials', {
+    await queryInterface.createTable('materials', {
       id: {
         type: Sequelize.UUID,
         primaryKey: true,
@@ -19,15 +19,15 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      name: {
+      filename: {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      doc_type: {
+      mimetype: {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      link: {
+      file_url: {
         type: Sequelize.STRING,
         allowNull: false,
       },
@@ -49,6 +49,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable('course_materials');
+    await queryInterface.dropTable('materials');
   },
 };
